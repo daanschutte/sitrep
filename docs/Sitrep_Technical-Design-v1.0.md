@@ -148,7 +148,7 @@ CI builds both. Native is only published on the cloud-demo release branch. See �
 | Language | Java 21 LTS | Records, sealed classes, pattern matching, virtual threads |
 | Framework | Spring Boot 4 | |
 | Web | Spring MVC (servlet) | Virtual threads enabled (`spring.threads.virtual.enabled=true`) |
-| Modularity | Spring Modulith 1.3 | Boundary enforcement, JPA-backed event publication |
+| Modularity | Spring Modulith 2.0.6 | Boundary enforcement, JPA-backed event publication |
 | Security | Spring Security 6 | `oauth2-resource-server` for JWT validation; `NimbusJwtEncoder` for issuance |
 | Persistence | Spring Data JPA + Hibernate 6 | `@Filter` for multi-tenancy ergonomic layer |
 | Database | PostgreSQL 17 | Row Level Security for multi-tenancy enforcement |
@@ -156,12 +156,12 @@ CI builds both. Native is only published on the cloud-demo release branch. See �
 | Connection pool | HikariCP | Spring Boot default |
 | Cache | Caffeine via `@Cacheable` | Local cache, no distributed dependency |
 | Validation | Jakarta Bean Validation (Hibernate Validator) | + explicit domain checks in services |
-| API docs | SpringDoc OpenAPI 2.7 | Swagger UI in non-prod |
+| API docs | SpringDoc OpenAPI 3.0.2 | Swagger UI in non-prod |
 | Documents | OpenPDF (V1) | Lighter than JasperReports for the V1 scope |
 | Logging | SLF4J + Logback | JSON in prod via `logback-spring.xml` profile |
 | Metrics | Micrometer + Spring Boot Actuator | Prometheus scrape endpoint |
 | Build | Maven 3.9 | Spring Boot parent POM |
-| Format | Spotless + palantir-java-format | Enforced in CI |
+| Format | Spotless + Google Java Format | Enforced in CI |
 | Coverage | JaCoCo | Reports published in CI |
 | Native | GraalVM 21 Native Image | Optional `native` Maven profile |
 | Testing | JUnit 5 + AssertJ + Mockito | + Testcontainers + ArchUnit + Spring Modulith test |
@@ -193,7 +193,7 @@ com.camelbytes.sitrep                  (root, @SpringBootApplication, @Modulithi
 ├── currencies/                        module: currency definitions, grants, warning computation, ad-hoc flight creation triggers
 ├── reporting/                         module: PDF generation (authorisation sheets)
 └── shared/                            cross-module primitives (library, not a Modulith module)
-    ├── domain/                        BaseEntity, SquadronScoped, audit ledger
+    ├── domain/                        BaseEntity, audit ledger
     ├── error/                         DomainException hierarchy, GlobalExceptionHandler
     ├── security/                      CurrentUser, JWT plumbing, SpEL beans for authorisation expressions
     ├── config/                        JPA auditing config, virtual threads, Caffeine, JSON
@@ -262,24 +262,26 @@ flightops.OperationsService.signBack(eventId)
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @UuidGenerator(style = UuidGenerator.Style.TIME)
     private UUID id;
 
     @CreatedDate
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
     @LastModifiedDate
+    @Column(nullable = false)
     private Instant updatedAt;
 
     @Version
     private Long version;
-    // equals/hashCode by id, protected setters via package-private subclass methods
+    // equals: id != null && id.equals(other.id); hashCode: getClass().hashCode()
 }
 ```
 
-`@EnableJpaAuditing` is set once in `shared/config/`. Optimistic locking (`@Version`) is on by default — concurrent edits surface as `OptimisticLockException` mapped to `409 Conflict`.
+`@EnableJpaAuditing` is set once in `shared/config/`. Optimistic locking (`@Version`) is on by default — concurrent edits surface as `OptimisticLockingFailureException` mapped to `409 Conflict`.
 
-UUIDs map to Postgres `uuid` natively. UUIDv4 from Hibernate's default generator. UUIDv7 (time-ordered) deferred until measurable index pain.
+UUIDs map to Postgres `uuid` natively. UUID v7 (time-ordered) via `@UuidGenerator(style = TIME)` — monotonically increasing, dramatically better for PostgreSQL B-tree index performance than random UUID v4.
 
 ### 7.2 Naming strategy
 
@@ -287,13 +289,7 @@ Hibernate's `SpringPhysicalNamingStrategy` (default in Spring Boot): `ScheduledE
 
 ### 7.3 Multi-tenancy — two layers
 
-**Layer 1: Hibernate `@Filter` (application ergonomics).** Entities implementing `SquadronScoped` are annotated with a `@FilterDef` + `@Filter`. The filter is enabled on every session by a `@Component` listening for new sessions; it reads the current user's home squadron and additional cross-squadron grants from the request-scoped `CurrentUser` bean and parameterises the filter with the resulting array of UUIDs.
-
-```java
-public interface SquadronScoped {
-    UUID getSquadronId();
-}
-```
+**Layer 1: Hibernate `@Filter` (application ergonomics).** Squadron-scoped entities are annotated directly with `@FilterDef` + `@Filter`. The filter is enabled on every session by a `@Component` that reads the current user's home squadron and additional cross-squadron grants from the request-scoped `CurrentUser` bean and parameterises the filter with the resulting array of UUIDs.
 
 Effect: any JPA query — including those Spring Data generates from method names — automatically filters to the accessible squadrons. The application sees `EntityNotFoundException` for events outside its tenancy scope, not a leak.
 
@@ -441,7 +437,7 @@ The `scheduling` module owns the abstract base, the status machine, and the conf
            parameters = @ParamDef(name = "squadronIds", type = UUID[].class))
 @Filter(name = "squadronFilter",
         condition = "squadron_id = ANY(:squadronIds)")
-public abstract class ScheduledEvent extends BaseEntity implements SquadronScoped {
+public abstract class ScheduledEvent extends BaseEntity {
 
     private UUID squadronId;
     @Enumerated(EnumType.STRING) private EventStatus status;
@@ -479,7 +475,8 @@ public abstract class ScheduledEvent extends BaseEntity implements SquadronScope
 Each transition method:
 - validates the current status permits the transition (throws `IllegalStateTransitionException` extending `BusinessRuleException`)
 - updates state
-- emits a domain event via `Spring`'s `AbstractAggregateRoot.registerEvent(...)` or via a passed-in publisher
+
+The service calling the transition method is responsible for publishing the resulting domain event via `ApplicationEventPublisher`. The entity is pure domain state; the service orchestrates and decides what to publish.
 
 ```java
 public enum EventStatus {
@@ -535,7 +532,7 @@ public class CrewAssignment extends BaseEntity {
 
 ```java
 @Entity
-public class Formation extends BaseEntity implements SquadronScoped {
+public class Formation extends BaseEntity {
     private UUID squadronId;
     private String callsign;
     // Members are ScheduledEvents where event.formationId == this.id
@@ -556,9 +553,9 @@ public class Platform extends BaseEntity {
     private boolean active;
 }
 
-@Entity public class Aircraft   extends BaseEntity implements SquadronScoped { /* squadronId, platformId, tailNumber, isShared, isActive */ }
-@Entity public class Simulator  extends BaseEntity implements SquadronScoped { /* squadronId, platformId, isShared, isActive */ }
-@Entity public class Room       extends BaseEntity implements SquadronScoped { /* squadronId, platformId, isShared, isActive */ }
+@Entity public class Aircraft   extends BaseEntity { /* squadronId, platformId, tailNumber, isShared, isActive */ }
+@Entity public class Simulator  extends BaseEntity { /* squadronId, platformId, isShared, isActive */ }
+@Entity public class Room       extends BaseEntity { /* squadronId, platformId, isShared, isActive */ }
 ```
 
 ### 9.6 User qualifications
@@ -677,7 +674,9 @@ A `OncePerRequestFilter` populates MDC with `requestId`, `userId`, `squadronId` 
 
 ### 11.3 Caching
 
-`@Cacheable` / `@CacheEvict` / `@CachePut` on read-heavy lookups (platforms list, authorisation profiles, user qualifications). Caffeine is the provider — local in-memory, no distributed dependency. Cache eviction on writes is explicit.
+`@Cacheable` / `@CacheEvict` / `@CachePut` on read-heavy lookups (platforms list, authorisation profiles, user qualifications). Cache eviction on writes is explicit.
+
+**Provider:** Caffeine (local in-memory) for single-instance and development. Production deployments running two instances behind a load balancer use Redis as the backing store — swapped in via Spring profile (`spring.cache.type=redis`). Application code is identical; the provider is a config concern.
 
 Currency state is cached per user with a TTL plus event-driven invalidation (`@ApplicationModuleListener` on `EventSignedBackEvent`).
 
@@ -745,7 +744,7 @@ GraalVM Native Image is a secondary build target (cloud demo, scale-to-zero scen
 | Module | Spring Modulith `@ApplicationModuleTest` | Each module bootstraps with only its declared dependencies |
 | Integration | `@SpringBootTest` + Testcontainers Postgres | Full HTTP request → response per endpoint, including security |
 | Architecture | ArchUnit + `ApplicationModules.verify()` | Module boundaries, layer rules, naming, no field injection |
-| Contract | Spring REST Docs or JSON snapshot | API contract stability across releases |
+| Contract | Committed OpenAPI spec | API contract stability across releases — spec committed to repo on every release, consumed by frontend type generation |
 | Outbox | Targeted integration tests | Event publication, listener retry, idempotency |
 | PDF | Snapshot tests | Generated documents have expected structure |
 | Native build | `mvn -Pnative test` | Sanity check that the native image starts and serves a request |
