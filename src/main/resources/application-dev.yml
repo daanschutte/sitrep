@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT}/${POSTGRES_DB}
+    username: app_user
+    password: ${APP_USER_PASSWORD}
+
+  flyway:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT}/${POSTGRES_DB}
+    user: dev
+    password: ${POSTGRES_PASSWORD}
+
+springdoc:
+  swagger-ui:
+    enabled: true
