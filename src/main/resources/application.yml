@@ -7,13 +7,12 @@ spring:
       enabled: true
 
   datasource:
-    name: sitrep
     url: ${POSTGRES_URL}
     username: ${APP_USER_USERNAME}
     password: ${APP_USER_PASSWORD}
 
   flyway:
-    url: ${FLYWAY_URL}
+    url: ${POSTGRES_URL}
     user: ${FLYWAY_USERNAME}
     password: ${FLYWAY_PASSWORD}
 
