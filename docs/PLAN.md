@@ -88,17 +88,14 @@ Each phase ends with: green CI, `./mvnw verify` clean, updated OpenAPI checked i
 - `application.yml` — virtual threads, separate Flyway datasource, JPA config, actuator probes, Swagger off by default ✓
 - `application-dev.yml` — local datasource defaults, Swagger enabled ✓
 - `SitrepApplicationTests` + `TestcontainersConfiguration` + `TestSitrepApplication` ✓
+- `ModulithVerificationTest` ✓
+- Architecture tests — `InjectionRulesTests`, `IORulesTests`, `LocationRulesTests` ✓
+- `README.md` + `CONTRIBUTING.md` ✓
+- `BaseEntity.equals()` — fixed to use `instanceof` pattern matching ✓
 
 **Remaining:**
-- `logback-spring.xml` — JSON encoder default, human-readable dev profile
 - `Dockerfile` — multi-stage, `eclipse-temurin:21-jre`, non-root
 - GitHub Actions CI — build → Spotless → test
-- `README.md` — quickstart, how to run tests, how to add a module
-- `ModulithVerificationTest` — `ApplicationModules.of(SitrepApplication.class).verify()`
-- `ArchBaseTest` — no field `@Autowired`, controllers in `..internal.web..`, `@Service` in `..internal..`, no `System.out`
-
-**Open issue — `BaseEntity.equals()`:**
-The `getClass()` guard breaks with Hibernate lazy-loading proxies (Hibernate creates a runtime subclass, so `getClass()` returns different types for a proxy and its real instance). Fix before entities accumulate: replace `getClass() != o.getClass()` with `!(o instanceof BaseEntity other)`.
 
 **What this teaches:** Spring Boot 4 project layout, Spring Modulith bootstrap, Testcontainers wiring, RLS role separation, stateless JWT security baseline, twelve-factor config.
 
