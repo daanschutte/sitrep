@@ -1,151 +1,190 @@
-# Phase 0 Plan Review
+# Sitrep — Development Plan
+
+*Last updated: May 2026. Living document — update as decisions land.*
+
+---
 
 ## Context
 
-This is a review of the PLAN.md and SitRep_Spec.md against the current codebase state on `daanschutte/configure-application`. The goal is to surface gaps, gotchas, and design questions before implementation of the remaining Phase 0 deliverables begins. Per CLAUDE.md, Claude does not write implementation code — this review is the artifact.
+Sitrep is being built as both a portfolio piece and a sellable product. The spec (`SitRep_Spec.md`) is the authoritative architecture reference; this plan is the build sequence — phases, deliverables, and open decisions.
+
+Daan writes all implementation code. Claude's role is design review, explanation, and pointing out idioms and gotchas.
 
 ---
 
-## Current State vs Phase 0 Checklist
+## Where We Are (May 2026)
+
+Phase 0 (Foundation) is in progress on branch `daanschutte/configure-application`.
+
+---
+
+## Decisions Locked In
+
+See the spec for full rationale. Summary:
+
+- **Stack**: Java 21, Spring Boot 4.x, Maven (single module), PostgreSQL 17, Spring Modulith 2.x, Spring Data JPA + Hibernate 6, Flyway
+- **Web**: Spring MVC, not WebFlux. Virtual threads (`spring.threads.virtual.enabled: true`).
+- **Security**: Spring Security 6 + `oauth2-resource-server` for JWT validation, `nimbus-jose-jwt` for signing. Stateless — no sessions.
+- **Multi-tenancy**: Postgres RLS only. No Hibernate `@Filter`. See ADR-002.
+- **Outbox**: Hand-rolled (~150 lines total). Two dispatch loops: general (`SKIP LOCKED`) and audit (advisory lock, `SET LOCAL ROLE audit_writer`). See ADR-003.
+- **State machine**: Enum-driven. Java 21 switch expressions on the entity. `platform.requiresAuthorization()` boolean handles profile variations. See ADR-004.
+- **Audit**: Append-only hash-chained ledger. Insert-only via `audit_writer` role. Populated via outbox audit dispatcher. See ADR-007.
+- **Auth**: JWT access tokens (HS256, 15 min) + opaque refresh tokens (30 days, HttpOnly cookie, SHA-256 hashed). BCrypt cost 12. See ADR-005.
+- **Errors**: RFC 9457 `ProblemDetail`. `422` for Bean Validation failures. Global `@ControllerAdvice`. Add exceptions as each phase needs them.
+- **Package root**: `com.camelbytes.sitrep`
+- **No**: Lombok, H2, field injection, Spring Statemachine, Debezium or outbox libraries, JJWT, MapStruct, pgAdmin
+- **Container**: Docker multi-stage, `eclipse-temurin:21-jre`, non-root
+- **Logging**: SLF4J + Logback + `logstash-logback-encoder` (add when `logback-spring.xml` is written). JSON to stdout.
+- **Tracing**: `micrometer-tracing-bridge-brave` (add in Phase 1 when MDC filter is wired). Provides `traceId`/`spanId`.
+- **Caffeine**: Add in Phase 8 (Currency) when first needed.
+- **Add dependencies when first needed** — don't add upfront.
+- **Add module `package-info.java` when building that module** — not as an empty skeleton.
+- **Add Flyway migrations when the tables are needed** — no upfront schema-only migrations.
+
+---
+
+## Module Dependency Graph
+
+```
+outbox       (no deps — infrastructure used by all)
+shared       (no deps — library used by all; no @ApplicationModule, no internal/ boundary)
+users        (→ shared)
+squadrons    (→ users)
+auth         (→ users, squadrons)
+platforms    (→ squadrons)
+courses      (→ users, squadrons)
+scheduling   (→ users, squadrons, platforms, courses)
+operations   (→ scheduling)
+grading      (→ scheduling, courses)
+logbooks     (→ scheduling, platforms)
+currency     (→ logbooks, users, platforms)
+audit        (→ outbox — consumer only; domain modules never call audit directly)
+printing     (→ scheduling, users — read-only consumer)
+```
+
+Each module has `api/` (exposed to other modules) and `internal/` (Modulith-enforced private). `shared` has neither — its sub-packages (`domain/`, `config/`, `security/`) are open to all.
+
+---
+
+## The Phases
+
+Each phase ends with: green CI, `./mvnw verify` clean, updated OpenAPI checked in, demoable behaviour where applicable.
+
+---
+
+### Phase 0 — Foundation
+
+**Goal:** production-shaped skeleton that boots, runs in Docker, and has all cross-cutting plumbing wired so subsequent module work is just domain work.
 
 **Done:**
-- `pom.xml` — Boot 4.0.6, Java 21, Modulith 2.0.6, plugins (Spotless, JaCoCo, Flyway Maven) ✓
-- `SitrepApplication` — `@Modulithic(systemName = "Sitrep")` + `@SpringBootApplication` ✓
-- `shared/domain/BaseEntity` — TIME-style UUID, auditing fields, `@Version` ✓
+- `pom.xml` — Boot 4.0.6, Java 21, Modulith 2.0.6, all deps and plugins ✓
+- `SitrepApplication` — `@Modulithic(systemName = "Sitrep")` ✓
+- `shared/domain/BaseEntity` — TIME-style UUID, auditing timestamps, `@Version` ✓
 - `shared/config/JpaConfig` — `@EnableJpaAuditing` ✓
-- `compose.yaml` — Postgres service (partial — see issues below) ✓
-- `application.properties` — virtual threads, datasource basics ✓
-- `SitrepApplicationTests` + `TestcontainersConfiguration` — context loads smoke test ✓
+- `shared/config/SecurityConfig` — CSRF disabled, `STATELESS`, `permitAll()` placeholder ✓
+- `shared/security/CurrentUser` — interface with `userId()`, `currentSquadronId()`, `accessibleSquadronIds()`, `roles()` ✓
+- `compose.yaml` — Postgres 17, init script mount ✓
+- `docker/init/init.sh` — creates `app_user` (LOGIN) and `audit_writer` (NOLOGIN), grants role switch ✓
+- `application.yml` — virtual threads, separate Flyway datasource, JPA config, actuator probes, Swagger off by default ✓
+- `application-dev.yml` — local datasource defaults, Swagger enabled ✓
+- `SitrepApplicationTests` + `TestcontainersConfiguration` + `TestSitrepApplication` ✓
 
-**Not yet built:**
-- Module package skeleton (`package-info.java` with `@ApplicationModule` per module)
-- `shared/error/` exception hierarchy (`SitrepException`, `NotFoundException`, etc.)
-- `shared/web/GlobalExceptionHandler` (`@ControllerAdvice`, RFC 9457, 422 for validation)
-- `shared/security/` `CurrentUser` interface + placeholder permit-all filter chain
-- Migrate `application.properties` → `application.yml` + `application-{dev,test}.yml`
-- Flyway `V1__roles_and_schemas.sql`
-- `logback-spring.xml` (JSON + dev human-readable profile)
-- SpringDoc / Swagger UI (non-prod only)
-- Actuator liveness/readiness/prometheus config
-- Dockerfile (multi-stage, eclipse-temurin:21-jre, non-root)
-- GitHub Actions CI
-- README.md
-- `ModulithVerificationTest`
-- `ArchBaseTest`
+**Remaining:**
+- `logback-spring.xml` — JSON encoder default, human-readable dev profile
+- `Dockerfile` — multi-stage, `eclipse-temurin:21-jre`, non-root
+- GitHub Actions CI — build → Spotless → test
+- `README.md` — quickstart, how to run tests, how to add a module
+- `ModulithVerificationTest` — `ApplicationModules.of(SitrepApplication.class).verify()`
+- `ArchBaseTest` — no field `@Autowired`, controllers in `..internal.web..`, `@Service` in `..internal..`, no `System.out`
 
----
+**Open issue — `BaseEntity.equals()`:**
+The `getClass()` guard breaks with Hibernate lazy-loading proxies (Hibernate creates a runtime subclass, so `getClass()` returns different types for a proxy and its real instance). Fix before entities accumulate: replace `getClass() != o.getClass()` with `!(o instanceof BaseEntity other)`.
 
-## Issues & Gotchas to Work Through
-
-### 1. Missing pom.xml dependencies
-
-Two things the spec requires that aren't in the pom yet:
-
-- **`logstash-logback-encoder`** (`net.logstash.logback:logstash-logback-encoder`) — without this the `logback-spring.xml` JSON encoder won't work. Add as a compile dependency.
-- **Micrometer Tracing + Brave** — `spring-boot-starter-actuator` brings Micrometer metrics but NOT tracing. You need `micrometer-tracing-bridge-brave` (runtime) to get `traceId`/`spanId` in logs and MDC. The `spring-modulith-observability` dependency is already there but it wraps Micrometer Tracing — it doesn't pull in a concrete bridge.
-
-### 2. `postgres:latest` in compose.yaml and TestcontainersConfiguration
-
-The spec says Postgres 17. `latest` is non-reproducible — a future pull could silently change behaviour or break migrations. Pin both to `postgres:17` now, before migrations exist, so everything is consistent from the start.
-
-### 3. Package root inconsistency between spec and code
-
-Spec §A.3 describes modules as `com.sitrep.<module>`. The codebase uses `com.camelbytes.sitrep`. The "Decisions Locked In" section of PLAN.md does say `com.camelbytes.sitrep` — but the spec's module dependency graph (`com.sitrep.*`) is a latent confusion. Worth aligning the spec or at minimum making the decision explicit in an ADR.
-
-### 4. `BaseEntity.equals()` and JPA proxy behaviour
-
-The current implementation:
-
-```java
-if (o == null || getClass() != o.getClass()) return false;
-```
-
-`getClass()` breaks with Hibernate lazy-loading proxies — Hibernate creates a subclass of your entity at runtime. When you compare a proxy to its real instance (which happens when you navigate a `@ManyToOne` and then fetch the real entity), `getClass()` returns different types even though they represent the same row.
-
-The idiomatic fix for JPA entities is `instanceof` with the concrete class — but since `BaseEntity` is abstract, a pattern like:
-
-```java
-if (!(o instanceof BaseEntity other)) return false;
-```
-
-then `id != null && id.equals(other.id)` would work. However, since `id` is the discriminator, an even simpler approach many teams use is to just not override `equals`/`hashCode` on the base class and let each entity decide — or use the `id != null` identity pattern at the concrete level.
-
-The existing `id != null && id.equals(other.id)` comparison at the bottom is the right approach; the `getClass()` guard at the top is the gotcha. Think through what behaviour you want for proxy comparisons.
-
-### 5. Security auto-configuration is active right now
-
-`spring-boot-starter-security` is on the classpath, which means Spring Security's auto-configuration is already running. The current context-loads test passes only because there are no protected endpoints yet. The moment you add any controller, requests will be blocked by default (form login / HTTP Basic). The placeholder filter chain (permit all `/api/v1/**`) needs to be in place before the first endpoint lands, not after.
-
-Design question: what should the placeholder permit? `anyRequest().permitAll()` is the cleanest for Phase 0 — it makes the intent explicit and avoids having to remember to update the path list as endpoints arrive in Phase 1.
-
-### 6. V1 migration and the runtime role question
-
-The spec calls for `app_user` and `audit_writer` roles. But `compose.yaml` connects the app as `dev` (a superuser). For RLS to actually enforce tenant isolation, the app must connect as a non-BYPASSRLS role.
-
-Two approaches for local dev:
-- **Grant `dev` NOBYPASSRLS** — simplest for dev, but `dev` is a superuser and superusers bypass RLS by default. You'd need to `ALTER USER dev BYPASSRLS` to reset that, or create `dev` without superuser.
-- **Have the app connect as `app_user`** — the V1 migration creates `app_user`, then the datasource URL in dev uses `app_user` credentials. This means Flyway (which runs migrations) still needs to run as a privileged user (`dev`), but the app runtime connects differently. Spring Boot supports separate Flyway datasource config (`spring.flyway.url`, `spring.flyway.user`) for exactly this reason.
-
-This is worth designing before V1 migration is written — it affects both `compose.yaml` and `application.yml`.
-
-### 7. Actuator probes need explicit config
-
-`/actuator/health/liveness` and `/actuator/health/readiness` aren't exposed by default. You'll need:
-
-```yaml
-management:
-  endpoint:
-    health:
-      probes:
-        enabled: true
-```
-
-in `application.yml`. Easy to miss and the endpoints will silently 404 without it.
-
-### 8. Caffeine is in pom.xml — why?
-
-Caffeine (the in-memory cache library) is in the pom as a compile dependency but isn't mentioned in the Phase 0 or Phase 1 spec. It appears first in Phase 8 (Currency — cache invalidation). Adding it now isn't wrong, but it goes against the spec's "add when first needed" principle and adds a dependency with no wiring. Consider removing it from the foundation pom and adding it in the phase that actually uses it.
-
-### 9. SpringDoc compatibility with Spring Boot 4
-
-`springdoc-openapi-starter-webmvc-ui` at version `3.0.2` — springdoc-openapi 3.x targets Spring Boot 3.x. Spring Boot 4's auto-configuration may have changed enough that this version breaks. The springdoc project typically releases a compatible version for each major Boot release. Worth checking the springdoc release notes for Boot 4 compatibility before spending time wiring it up.
+**What this teaches:** Spring Boot 4 project layout, Spring Modulith bootstrap, Testcontainers wiring, RLS role separation, stateless JWT security baseline, twelve-factor config.
 
 ---
 
-## Design Questions Worth Thinking Through
+### Phase 1 — Users, Squadrons, Auth, Audit, Outbox
 
-1. **Flyway migration user vs runtime user** — see issue #6 above. What does the datasource config look like per environment?
+*All the plumbing every later phase depends on.*
 
-2. **`ModulithVerificationTest` in CI** — this test calls `ApplicationModules.of(SitrepApplication.class).verify()`. It will fail until every referenced module (users, squadrons, auth, etc.) has at least a `package-info.java`. The package skeleton and the verification test need to land together in the same commit, or the test needs to be added after the skeleton.
+**Goal:** authenticated requests, multi-tenancy proven via rooms RLS demo, hash-chained audit trail, outbox dispatching.
 
-3. **ArchUnit rules in `ArchBaseTest`** — the plan lists: no field injection, controllers in `internal/web/`, `@Service` on services, no `System.out`. Think about what "no field injection" means precisely: does it ban `@Autowired` on fields, or also `@Value`? `@Value` on fields is idiomatic for simple config binding; field `@Autowired` is the one to ban.
+**Domain:** `User`, `Squadron`, `SquadronAssignment`, `CrossSquadronGrant`, `RefreshToken`, `AuditEntry`, `OutboxMessage`, `Room` (RLS stub)
 
-4. **`shared/security/CurrentUser` interface design** — what does it expose? Likely `UUID userId()`, `UUID currentSquadronId()`, `List<UUID> accessibleSquadrons()`, `Set<String> roles()`. Designing the interface now (even though the impl lands in Phase 1) prevents Phase 1 from needing to refactor code that already uses it.
+**Endpoints:** per spec §B.3
+
+**Migrations:** per spec §B.4 (each module creates its own schema as part of its first migration)
+
+**Key deliverables:**
+- `users`, `squadrons`, `auth` modules — CRUD and full auth flow
+- `CurrentUserImpl` — request-scoped, reads `SecurityContextHolder`
+- JWT issuance via `NimbusJwtEncoder`; validation via `oauth2-resource-server`
+- Refresh token rotation; revocation on logout
+- `HandlerInterceptor` — `SET LOCAL app.accessible_squadrons` per request
+- `outbox` module — hand-rolled general + audit dispatchers
+- `audit` module — hash chain, `audit_writer` role enforcement, immutability trigger
+- MDC filter — `userId`, `squadronId`, `requestId`, `traceId`
+- Add `micrometer-tracing-bridge-brave` and `logstash-logback-encoder` to pom when wiring MDC
+- RLS policy on `room`; `GET /api/v1/rooms` proves isolation
+
+**Tests:** per spec §B.6 definition of done
+
+**What this teaches:** Spring Security 6 filter chain, JWT via Spring native primitives, refresh token rotation, PostgreSQL RLS, hash-chained ledger, hand-rolled outbox, advisory locks.
 
 ---
 
-## AI-Readiness: Fitted-For-Not-With
+### Phase 2 — Platforms
 
-No AI integration now — this is a closed system. The note here is purely: don't make decisions in Phase 0–4 that turn AI into a major refactor later.
-
-**Four things to preserve:**
-
-1. **Keep `api/` read models flat and query-friendly.** Modulith already enforces that a future `ai` module can only call other modules' `api/` packages. If those packages expose clean DTOs rather than graph-walk objects, a future "who can slot in?" tool is a thin service call, not a JPA detective exercise. Design `api/` projections with readability in mind from the start.
-
-2. **Keep `CurrentUser` injectable as an interface.** The normal implementation is request-scoped (JWT-parsed per request). A future AI chat handler running outside a normal HTTP request will need a synthetic `CurrentUser` constructed from the chat payload. This only works cleanly if nothing in the domain hardcodes `CurrentUserImpl` — coding to the interface already achieves this.
-
-3. **Don't block SSE paths in the security filter chain.** The Phase 0 placeholder filter chain doesn't need SSE-specific config yet, but avoid adding `Content-Type` allow-lists or response header stripping that would silently break a streaming endpoint later. Leave the transport layer open.
-
-4. **Don't shortcut the outbox for in-process-only events.** The outbox + event structure means a future `ai` module could subscribe to domain events without touching existing modules. The spec already mandates this pattern — just don't drift from it in later phases by emitting Spring `ApplicationEvent`s directly for convenience.
+Real `Platform`, `PlatformType`, `AuthorizationProfile` (with `requiresAuthorization` boolean), `Tail`. Replaces room stub.
 
 ---
 
-## Verification (Phase 0 done when...)
+### Phase 3 — Courses & Syllabus
 
-- `./mvnw verify` passes: Spotless check, compile, unit tests, integration test (context loads + Flyway V1 applies cleanly)
-- `ModulithVerificationTest` green with the empty module skeleton
-- `ArchBaseTest` green
-- `docker compose up` → app starts → `/actuator/health` returns UP
-- `/actuator/health/liveness` and `/actuator/health/readiness` return 200
-- Swagger UI visible at `/swagger-ui.html` in dev profile
-- JSON log lines in container stdout
+`Course`, `SyllabusEvent`, `Enrolment`, `SyllabusProgress`. Syllabus board projection.
+
+---
+
+### Phase 4 — Scheduling
+
+`Event` with Java 21 switch-expression state machine, `Formation`, `CrewSlot`, `DailyProgram`. Staging, publishing, conflict detection, cancellations.
+
+---
+
+### Phase 5 — Operations Room
+
+Ops-room workflow on top of scheduling. No new entities — commands against `scheduling`.
+
+---
+
+### Phase 6 — Formations
+
+Formation groups, cross-squadron membership, formation-level state transitions.
+
+---
+
+### Phase 7 — Grading & Logbooks
+
+`Gradesheet` on sign-back. Auto-generated `LogbookEntry` from outbox event.
+
+---
+
+### Phase 8 — Currency
+
+`CurrencyDefinition`, `ManualCurrencyRecord`. Reads logbooks; warnings to scheduling. Add Caffeine here.
+
+---
+
+### Phase 9 — Printing
+
+PDF auth sheets via `BlobStore`. Filesystem default; S3/MinIO for cloud.
+
+---
+
+## Continuous (not phase-bound)
+
+- **ADRs** — write when decisions land. First seven in spec §A.7.
+- **Architecture tests** — each phase adds at least one ArchUnit rule for its module boundary
+- **OpenAPI** — checked in after every phase; CI fails on breaking changes
+- **Security review** — every phase touching auth or data access gets a focused pass

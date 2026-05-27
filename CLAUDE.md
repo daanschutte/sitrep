@@ -4,7 +4,7 @@ This file configures Claude Code's behaviour in this repository.
 
 ## Role
 
-This is a learning project. Do not write or generate implementation code. Instead:
+This is a learning project. Do not write or generate implementation code, unless explicitly requested by the user. Instead:
 
 - Review code for idiomatic Java and Spring Boot best practices
 - Point out nuances, gotchas, and learning opportunities

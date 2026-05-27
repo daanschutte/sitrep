@@ -40,7 +40,7 @@ Companion to the Functional Design. This document covers the **technical** appro
 
 ### A.3 Module Map
 
-Each module is a top-level package under `com.sitrep.<module>`. Spring Modulith enforces that modules only depend on other modules' explicitly exposed `api` sub-packages, not their `internal` packages.
+Each module is a top-level package under `com.camelbytes.sitrep.<module>`. Spring Modulith enforces that modules only depend on other modules' explicitly exposed `api` sub-packages, not their `internal` packages.
 
 | Module | Responsibility | Key entities | Depends on |
 |---|---|---|---|
@@ -386,16 +386,16 @@ Roles created first means later migrations can grant against them. Each migratio
 
 ## Part C — What's Next (Pencilled In, Not Spec'd)
 
-After slice 1, in roughly this order. We'll spec each in detail when we get there:
+After Phase 1, in roughly this order. We'll spec each in detail when we get there:
 
-- **Slice 2: Platforms** — real `Platform`, `PlatformType`, `AuthorizationProfile`, `Tail`. Replace the room stub. Small, builds confidence in the patterns.
-- **Slice 3: Courses & Syllabus** — `Course`, `SyllabusEvent`, enrolments. Read-only views including Syllabus Board projection.
-- **Slice 4: Scheduling — the big one** — `Event`, state machine, daily program, crew slots, staging/publishing, conflict detection. Touches every cross-cutting concern.
-- **Slice 5: Operations Room** — ops-specific transitions and views on top of scheduling.
-- **Slice 6: Formations** — formation groups, cross-squadron membership.
-- **Slice 7: Grading & Logbooks** — gradesheets, auto-generated logbook entries on sign-back.
-- **Slice 8: Currency** — time-based and manual currencies, authorization warnings.
-- **Slice 9: Cancellations refinements & Printing** — structured cancellation flow polish, PDF auth sheets via `BlobStore`.
-- **Slice 10: Frontend** — separate concern, separate plan.
+- **Phase 2: Platforms** — real `Platform`, `PlatformType`, `AuthorizationProfile`, `Tail`. Replace the room stub. Small, builds confidence in the patterns.
+- **Phase 3: Courses & Syllabus** — `Course`, `SyllabusEvent`, enrolments. Read-only views including Syllabus Board projection.
+- **Phase 4: Scheduling — the big one** — `Event`, state machine, daily program, crew slots, staging/publishing, conflict detection. Touches every cross-cutting concern.
+- **Phase 5: Operations Room** — ops-specific transitions and views on top of scheduling.
+- **Phase 6: Formations** — formation groups, cross-squadron membership.
+- **Phase 7: Grading & Logbooks** — gradesheets, auto-generated logbook entries on sign-back.
+- **Phase 8: Currency** — time-based and manual currencies, authorization warnings.
+- **Phase 9: Cancellations refinements & Printing** — structured cancellation flow polish, PDF auth sheets via `BlobStore`.
+- **Phase 10: Frontend** — separate concern, separate plan.
 
-Each slice ends with: green CI, updated OpenAPI, an ADR or two, demo recording.
+Each phase ends with: green CI, updated OpenAPI, an ADR or two, demo recording.
