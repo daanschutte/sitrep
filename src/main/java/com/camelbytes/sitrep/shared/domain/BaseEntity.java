@@ -50,8 +50,7 @@ public abstract class BaseEntity {
 
   @Override
   public boolean equals(Object o) {
-    if (o == null || getClass() != o.getClass()) return false;
-    BaseEntity other = (BaseEntity) o;
+    if (!(o instanceof BaseEntity other)) return false;
     return id != null && id.equals(other.id);
   }
 
