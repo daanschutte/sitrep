@@ -1,10 +1,16 @@
-FROM bellsoft/liberica-openjre-debian:25-cds AS builder
+FROM eclipse-temurin:25-jdk AS builder
 
 WORKDIR /builder
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} application.jar
 
-RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
+COPY mvnw .
+COPY .mvn/ .mvn/
+COPY pom.xml .
+RUN ./mvnw dependency:go-offline -B
+
+COPY src/ src/
+RUN ./mvnw package -DskipTests -B
+
+RUN java -Djarmode=tools -jar target/*.jar extract --layers --destination extracted
 
 
 FROM bellsoft/liberica-openjre-debian:25-cds
