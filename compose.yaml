@@ -3,9 +3,9 @@ services:
     image: 'postgres:17'
     environment:
       - POSTGRES_DB=sitrep
-      - POSTGRES_USER=dev
-      - POSTGRES_PASSWORD=Electable-Regalia-Hasty-Sedative
-      - APP_USER_PASSWORD=Coping-Olympics-Importer-Datebook
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - APP_USER_PASSWORD=${APP_USER_PASSWORD}
     ports:
       - '5432:5432'
     volumes:

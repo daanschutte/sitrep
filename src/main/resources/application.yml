@@ -13,8 +13,8 @@ spring:
 
   flyway:
     url: ${POSTGRES_URL}
-    user: ${FLYWAY_USERNAME}
-    password: ${FLYWAY_PASSWORD}
+    user: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
 
   jpa:
     open-in-view: false

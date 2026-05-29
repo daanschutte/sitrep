@@ -13,11 +13,10 @@ class SitrepApplicationTests {
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
     registry.add("POSTGRES_URL", TestcontainersConfiguration.postgres::getJdbcUrl);
+    registry.add("POSTGRES_USERNAME", TestcontainersConfiguration.postgres::getUsername);
+    registry.add("POSTGRES_PASSWORD", TestcontainersConfiguration.postgres::getPassword);
     registry.add("APP_USER_USERNAME", TestcontainersConfiguration.postgres::getUsername);
     registry.add("APP_USER_PASSWORD", TestcontainersConfiguration.postgres::getPassword);
-    registry.add("FLYWAY_URL", TestcontainersConfiguration.postgres::getJdbcUrl);
-    registry.add("FLYWAY_USERNAME", TestcontainersConfiguration.postgres::getUsername);
-    registry.add("FLYWAY_PASSWORD", TestcontainersConfiguration.postgres::getPassword);
   }
 
   @Test
