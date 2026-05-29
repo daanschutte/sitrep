@@ -77,24 +77,25 @@ Each phase ends with: green CI, `./mvnw verify` clean, updated OpenAPI checked i
 **Goal:** production-shaped skeleton that boots, runs in Docker, and has all cross-cutting plumbing wired so subsequent module work is just domain work.
 
 **Done:**
-- `pom.xml` — Boot 4.0.6, Java 21, Modulith 2.0.6, all deps and plugins ✓
+- `pom.xml` — Boot 4.0.6, Java 25, Modulith 2.0.6, all deps and plugins ✓
 - `SitrepApplication` — `@Modulithic(systemName = "Sitrep")` ✓
 - `shared/domain/BaseEntity` — TIME-style UUID, auditing timestamps, `@Version` ✓
 - `shared/config/JpaConfig` — `@EnableJpaAuditing` ✓
 - `shared/config/SecurityConfig` — CSRF disabled, `STATELESS`, `permitAll()` placeholder ✓
 - `shared/security/CurrentUser` — interface with `userId()`, `currentSquadronId()`, `accessibleSquadronIds()`, `roles()` ✓
-- `compose.yaml` — Postgres 17, init script mount ✓
+- `compose.yaml` — Postgres 17, app service, healthcheck, env var references ✓
 - `docker/init/init.sh` — creates `app_user` (LOGIN) and `audit_writer` (NOLOGIN), grants role switch ✓
 - `application.yml` — virtual threads, separate Flyway datasource, JPA config, actuator probes, Swagger off by default ✓
 - `application-dev.yml` — local datasource defaults, Swagger enabled ✓
+- `.env.example` — template for container credentials ✓
 - `SitrepApplicationTests` + `TestcontainersConfiguration` + `TestSitrepApplication` ✓
 - `ModulithVerificationTest` ✓
 - Architecture tests — `InjectionRulesTests`, `IORulesTests`, `LocationRulesTests` ✓
 - `README.md` + `CONTRIBUTING.md` ✓
 - `BaseEntity.equals()` — fixed to use `instanceof` pattern matching ✓
+- `Dockerfile` — multi-stage, Maven build inside Docker, `bellsoft/liberica-openjre-debian:25-cds`, non-root ✓
 
 **Remaining:**
-- `Dockerfile` — multi-stage, `eclipse-temurin:21-jre`, non-root
 - GitHub Actions CI — build → Spotless → test
 
 **What this teaches:** Spring Boot 4 project layout, Spring Modulith bootstrap, Testcontainers wiring, RLS role separation, stateless JWT security baseline, twelve-factor config.
