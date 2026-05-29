@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sitrep
+    username: app_user
+    password: Coping-Olympics-Importer-Datebook
+
+  flyway:
+    url: jdbc:postgresql://localhost:5432/sitrep
+    user: dev
+    password: Electable-Regalia-Hasty-Sedative
+
+logging:
+  level:
+    org.springframework.web: "debug"
+    org.hibernate: "error"
+
+springdoc:
+  swagger-ui:
+    enabled: true
+

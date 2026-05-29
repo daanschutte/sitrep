@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: sitrep
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: ${POSTGRES_URL}
+    username: ${APP_USER_USERNAME}
+    password: ${APP_USER_PASSWORD}
+
+  flyway:
+    url: ${POSTGRES_URL}
+    user: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    enabled: false
