@@ -4,15 +4,21 @@ Flight operations management for air force squadrons.
 
 ## Prerequisites
 
-- Java 21
+- Java 25
 - Docker
 
 ## Running locally
 
+Copy the example env file and fill in your passwords (only needed once):
+
+```bash
+cp .env.example .env
+```
+
 Start Postgres:
 
 ```bash
-docker compose up -d
+docker compose up postgres -d
 ```
 
 Run the app:
@@ -24,6 +30,31 @@ Run the app:
 Swagger UI: http://localhost:8080/swagger-ui.html
 
 Health: http://localhost:8080/actuator/health
+
+## IntelliJ run configuration
+
+To run the app from IntelliJ with the `dev` profile:
+
+1. Open **Run > Edit Configurations**
+2. Select the `SitrepApplication` configuration
+3. Set **Active profiles** to `dev`
+
+Alternatively, add `-Dspring.profiles.active=dev` to the **VM options** field.
+
+## Running as a container
+
+Build the JAR, then the image:
+
+```bash
+./mvnw package -DskipTests
+docker build -t sitrep:local .
+```
+
+Start the full stack:
+
+```bash
+docker compose up
+```
 
 ## Running tests
 

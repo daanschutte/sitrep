@@ -10,11 +10,11 @@ Companion to the Functional Design. This document covers the **technical** appro
 
 | Concern | Choice | Rationale |
 |---|---|---|
-| Language | Java 21 (LTS) | Current standard. Virtual threads, pattern matching, records all mature. |
+| Language | Java 25 (LTS) | Current LTS (released September 2025). Virtual threads, pattern matching, records all mature. AOT cache available (Java 24+). |
 | Framework | Spring Boot 4.x | Spring Boot 4.0+ at time of build. Spring Modulith 2.x targets Boot 4. |
 | Module boundaries | Spring Modulith | Compile-time enforcement of module boundaries. Replaces the "modular monolith by convention" pattern with one that fails the build when violated. |
 | Build | Maven (single module, Modulith uses packages) | Maven over Gradle for Dutch market familiarity; single module is fine with Modulith. |
-| Database | PostgreSQL 16+ | RLS for multi-tenancy, advisory locks, jsonb, generated columns. |
+| Database | PostgreSQL 17 | RLS for multi-tenancy, advisory locks, jsonb, generated columns. |
 | Persistence | Spring Data JPA + Hibernate 6 | Idiomatic. |
 | Migrations | Flyway | Versioned SQL migrations checked into repo. |
 | Web | Spring MVC (not WebFlux) | No reactive need; Dutch shops will know MVC. Virtual threads give scale without reactive complexity. |
@@ -25,7 +25,7 @@ Companion to the Functional Design. This document covers the **technical** appro
 | Logging | SLF4J + Logback + `logstash-logback-encoder` | JSON to stdout. |
 | Tracing | Micrometer Tracing + Brave (or OpenTelemetry bridge) | Provides traceId/spanId in logs and metrics. |
 | Observability | Spring Boot Actuator + Micrometer | `/actuator/health`, `/actuator/metrics`. Prometheus-compatible. |
-| Container | Docker, multi-stage build with `eclipse-temurin:21-jre` | Small final image. |
+| Container | Docker, multi-stage build with `bellsoft/liberica-openjre-debian:25-cds` | Spring Boot-aligned base image. CDS pre-built; AOT cache Dockerfile variant for fast startup. |
 | Local orchestration | Docker Compose | App + Postgres. |
 | Object storage abstraction | `BlobStore` interface, filesystem + S3-compatible impls | Added when first needed (PDF printing). Filesystem impl is the default for air-gapped. For the cloud demo, the S3-compatible impl talks to either real AWS S3 or an on-prem **MinIO** server (open-source S3-compatible object store that runs as a container — same SDK, same API, swap by config). |
 
@@ -215,7 +215,7 @@ Lightweight markdown files in `docs/decisions/`, one per significant decision. F
 - ADR-003: Hand-rolled outbox over Debezium/library
 - ADR-004: Enum-driven state machine over Spring Statemachine
 - ADR-005: JWT access + opaque refresh tokens
-- ADR-006: Java 21 + Spring Boot 3.x
+- ADR-006: Java 25 + Spring Boot 4.x
 - ADR-007: Audit ledger via outbox (eventual consistency) over synchronous writes
 
 These are gold for interviews — concrete evidence you think about trade-offs.
