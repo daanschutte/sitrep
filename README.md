@@ -1,6 +1,8 @@
 # Sitrep
 
-Flight operations management for air force squadrons.
+[![CI](https://github.com/daanschutte/sitrep/actions/workflows/ci.yml/badge.svg)](https://github.com/daanschutte/sitrep/actions/workflows/ci.yml)
+
+Modern aviation training management suite with a focus on simplicity and correctness.
 
 ## Prerequisites
 
