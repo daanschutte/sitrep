@@ -1,3 +1,10 @@
 package com.camelbytes.sitrep.users.internal;
 
-public record UserCreateRequest(String firstName, String lastName, String email, String rank) {}
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
+public record UserCreateRequest(
+    @NotBlank String firstName,
+    @NotBlank String lastName,
+    @Email String email,
+    @NotBlank String rank) {}
