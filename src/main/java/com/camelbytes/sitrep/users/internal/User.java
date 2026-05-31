@@ -12,7 +12,7 @@ public class User extends BaseEntity {
   private String email;
   private String rank;
 
-  public User() {}
+  protected User() {}
 
   public User(String firstName, String lastName, String email, String rank) {
     this.firstName = firstName;
