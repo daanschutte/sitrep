@@ -1,7 +1,9 @@
 package com.camelbytes.sitrep.users.internal;
 
+import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.users.api.UserDto;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,7 +23,11 @@ public class UserService {
 
   public UUID createUser(UserCreateRequest request) {
     User user = new User(request.firstName(), request.lastName(), request.email(), request.rank());
-    user = repository.save(user);
+    try {
+      user = repository.save(user);
+    } catch (DataIntegrityViolationException ex) {
+      throw new ConflictException("User with email " + request.email() + " already exists");
+    }
     return user.getId();
   }
 

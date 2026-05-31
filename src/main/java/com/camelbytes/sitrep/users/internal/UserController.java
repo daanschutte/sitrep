@@ -2,10 +2,8 @@ package com.camelbytes.sitrep.users.internal;
 
 import com.camelbytes.sitrep.users.api.UserDto;
 import jakarta.validation.Valid;
-
 import java.net.URI;
 import java.util.UUID;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
