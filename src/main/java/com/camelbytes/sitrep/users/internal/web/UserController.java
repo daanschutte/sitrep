@@ -1,6 +1,8 @@
-package com.camelbytes.sitrep.users.internal;
+package com.camelbytes.sitrep.users.internal.web;
 
 import com.camelbytes.sitrep.users.api.UserDto;
+import com.camelbytes.sitrep.users.internal.UserCreateRequest;
+import com.camelbytes.sitrep.users.internal.UserService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
