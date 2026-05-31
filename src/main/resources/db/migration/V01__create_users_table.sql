@@ -5,7 +5,7 @@ CREATE TABLE users
     last_name  VARCHAR(100) NOT NULL,
     email      VARCHAR(150) NOT NULL UNIQUE,
     rank       VARCHAR(16)  NOT NULL,
-    version    INTEGER,
+    version    BIGINT,
     created_at TIMESTAMPTZ  NOT NULL,
     updated_at TIMESTAMPTZ  NOT NULL
 );
