@@ -2,7 +2,11 @@ package com.camelbytes.sitrep.users.internal;
 
 import com.camelbytes.sitrep.users.api.UserDto;
 import jakarta.validation.Valid;
+
+import java.net.URI;
 import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,7 +31,8 @@ public class UserController {
   }
 
   @PostMapping
-  public UUID createUser(@RequestBody @Valid UserCreateRequest request) {
-    return service.createUser(request);
+  public ResponseEntity<Void> createUser(@RequestBody @Valid UserCreateRequest request) {
+    UUID userId = service.createUser(request);
+    return ResponseEntity.created(URI.create("/api/v1/users/" + userId)).build();
   }
 }
