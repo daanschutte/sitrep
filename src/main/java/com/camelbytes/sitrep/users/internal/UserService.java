@@ -1,10 +1,8 @@
 package com.camelbytes.sitrep.users.internal;
 
 import com.camelbytes.sitrep.users.api.UserDto;
-import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
 
 @Service
 public class UserService {
@@ -21,7 +19,7 @@ public class UserService {
         .orElseThrow(() -> new UserNotFoundException(id.toString()));
   }
 
-  public UUID createUser(@RequestBody @Valid UserCreateRequest request) {
+  public UUID createUser(UserCreateRequest request) {
     User user = new User(request.firstName(), request.lastName(), request.email(), request.rank());
     user = repository.save(user);
     return user.getId();
