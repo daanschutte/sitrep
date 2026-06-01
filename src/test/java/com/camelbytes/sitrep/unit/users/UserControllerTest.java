@@ -66,7 +66,7 @@ public class UserControllerTest extends AbstractIntegrationTests {
     @Test
     void createUser_createsUser() throws Exception {
       UserCreateRequest request =
-          new UserCreateRequest("Amelia", "Earhart", "amelia@earhart.com", "Capt");
+          new UserCreateRequest("Chuck", "Yeager", "speedy@jetpilot.com", "Gen");
 
       MvcResult result =
           mockMvc
@@ -93,7 +93,7 @@ public class UserControllerTest extends AbstractIntegrationTests {
     @Test
     void createUser_emptyFirstName_returnsUnprocessableContent() throws Exception {
       UserCreateRequest request =
-          new UserCreateRequest("", "Earhart", "amelia@earhart.com", "Capt");
+          new UserCreateRequest("", "Yeager", "speedy@jetpilot.com", "Gen");
 
       mockMvc
           .perform(
@@ -105,7 +105,7 @@ public class UserControllerTest extends AbstractIntegrationTests {
 
     @Test
     void createUser_emptyLastName_returnsUnprocessableContent() throws Exception {
-      UserCreateRequest request = new UserCreateRequest("Amelia", "", "amelia@earhart.com", "Capt");
+      UserCreateRequest request = new UserCreateRequest("Chuck", "", "speedy@jetpilot.com", "Gen");
 
       mockMvc
           .perform(
@@ -117,7 +117,7 @@ public class UserControllerTest extends AbstractIntegrationTests {
 
     @Test
     void createUser_emptyEmail_returnsUnprocessableContent() throws Exception {
-      UserCreateRequest request = new UserCreateRequest("Amelia", "Earhart", "", "Capt");
+      UserCreateRequest request = new UserCreateRequest("Chuck", "Yeager", "", "Gen");
 
       mockMvc
           .perform(
@@ -130,7 +130,7 @@ public class UserControllerTest extends AbstractIntegrationTests {
     @Test
     void createUser_duplicateEmail_returnsConflict() throws Exception {
       UserCreateRequest request =
-          new UserCreateRequest("Amelia", "Earhart", "sonic@boom.com", "Capt");
+          new UserCreateRequest("Chuck", "Yeager", "sonic@boom.com", "Gen");
 
       mockMvc
           .perform(
@@ -143,7 +143,7 @@ public class UserControllerTest extends AbstractIntegrationTests {
     @Test
     void createUser_emptyRank_returnsUnprocessableContent() throws Exception {
       UserCreateRequest request =
-          new UserCreateRequest("Amelia", "Earhart", "amelia@earhart.com", "");
+          new UserCreateRequest("Chuck", "Yeager", "speedy@jetpilot.com", "");
 
       mockMvc
           .perform(
