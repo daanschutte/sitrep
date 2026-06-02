@@ -1,0 +1,2 @@
+CREATE SCHEMA IF NOT EXISTS audit;
+GRANT USAGE ON SCHEMA audit TO app_user;
