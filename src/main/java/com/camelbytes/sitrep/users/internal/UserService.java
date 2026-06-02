@@ -14,11 +14,11 @@ public class UserService {
     this.repository = repository;
   }
 
-  public UserDto findById(UUID id) {
+  public UserDto getById(UUID id) {
     return repository
         .findById(id)
         .map(UserService::fromUser)
-        .orElseThrow(() -> new UserNotFoundException(id.toString()));
+        .orElseThrow(() -> new UserNotFoundException(id));
   }
 
   public UUID createUser(UserCreateRequest request) {
