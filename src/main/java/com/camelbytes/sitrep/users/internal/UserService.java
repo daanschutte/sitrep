@@ -17,7 +17,7 @@ public class UserService {
   public UserDto getById(UUID id) {
     return repository
         .findById(id)
-        .map(UserService::fromUser)
+        .map(UserService::toDto)
         .orElseThrow(() -> new UserNotFoundException(id));
   }
 
@@ -31,7 +31,7 @@ public class UserService {
     return user.getId();
   }
 
-  private static UserDto fromUser(User user) {
+  private static UserDto toDto(User user) {
     return new UserDto(
         user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRank());
   }
