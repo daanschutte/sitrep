@@ -1,9 +1,8 @@
 package com.camelbytes.sitrep.squadrons.internal;
 
 import com.camelbytes.sitrep.squadrons.api.SquadronDto;
-import org.springframework.stereotype.Service;
-
 import java.util.UUID;
+import org.springframework.stereotype.Service;
 
 @Service
 public class SquadronService {
@@ -21,6 +20,7 @@ public class SquadronService {
   }
 
   private static SquadronDto toDto(Squadron squadron) {
-    return new SquadronDto(squadron.getName(), squadron.getShortName().orElse(null), squadron.isActive());
+    return new SquadronDto(
+        squadron.getName(), squadron.getShortName().orElse(null), squadron.isActive());
   }
 }

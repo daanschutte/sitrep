@@ -4,7 +4,6 @@ import com.camelbytes.sitrep.shared.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-
 import java.util.Optional;
 
 @Entity
