@@ -21,6 +21,6 @@ public class SquadronService {
   }
 
   private static SquadronDto toDto(Squadron squadron) {
-    return new SquadronDto(squadron.getName(), squadron.getShortName(), squadron.isActive());
+    return new SquadronDto(squadron.getName(), squadron.getShortName().orElse(null), squadron.isActive());
   }
 }
