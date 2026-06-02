@@ -341,23 +341,23 @@ This is a placeholder so we can demonstrate RLS works. Real `platforms` module g
 
 ### B.4 Flyway Migrations (Slice 1)
 
+**Schema decision**: only the `audit` schema is a named Postgres schema — its privilege model (INSERT-only via `audit_writer`) requires the schema boundary. All other domain tables live in `public`. Adding a schema per module added ceremony with no real access-control benefit for those tables.
+
+**Role/user creation**: `app_user` (LOGIN) and `audit_writer` (NOLOGIN) are created in `docker/init/init.sh`, not in Flyway. Passwords belong with the role definition. `GRANT SET ON ROLE audit_writer TO app_user` is also in `init.sh`. Flyway migrations assume these roles pre-exist (they always do — Docker init runs before the app starts; Testcontainers tests connect as superuser).
+
 ```
-V1__roles_and_schemas.sql        (create users/squadrons/auth/audit/outbox/platforms schemas;
-                                  create app_user, audit_writer roles, both without BYPASSRLS;
-                                  app_user can SET ROLE to audit_writer;
-                                  grant baseline schema USAGE.)
-V2__users.sql                    (users.user)
+V1__roles_and_schemas.sql        (create audit schema; GRANT USAGE ON SCHEMA audit TO app_user)
+V2__users.sql                    (user table in public)
 V3__squadrons.sql                (squadron, squadron_assignment with partial unique index,
-                                  cross_squadron_grant)
-V4__auth.sql                     (refresh_token)
-V5__audit.sql                    (audit_entry; grant INSERT to audit_writer;
-                                  revoke UPDATE/DELETE; BEFORE UPDATE OR DELETE trigger)
-V6__outbox.sql                   (outbox_message with dispatch index)
-V7__platforms_room_stub.sql      (room table, ENABLE RLS, tenant_isolation policy,
-                                  grants to app_user)
+                                  cross_squadron_grant — all in public)
+V4__auth.sql                     (refresh_token in public)
+V5__audit.sql                    (audit.audit_entry; GRANT INSERT to audit_writer;
+                                  REVOKE UPDATE/DELETE; BEFORE UPDATE OR DELETE trigger)
+V6__outbox.sql                   (outbox_message in public, with dispatch index)
+V7__platforms_room_stub.sql      (room table in public, ENABLE RLS, tenant_isolation policy)
 ```
 
-Roles created first means later migrations can grant against them. Each migration grants the privileges its own tables need at the point of creation.
+Each migration grants the privileges its own tables need at the point of creation.
 
 ### B.5 Spring Modulith Configuration
 
