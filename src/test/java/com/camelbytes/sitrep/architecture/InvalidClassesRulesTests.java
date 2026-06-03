@@ -7,7 +7,7 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 @AnalyzeClasses(packages = "com.camelbytes.sitrep")
-public class IORulesTests {
+public class InvalidClassesRulesTests {
   @ArchTest
   static final ArchRule systemOut_shouldNotBeCalled =
       noClasses().should().accessField(System.class, "out");
