@@ -1,7 +1,9 @@
 package com.camelbytes.sitrep.squadrons.internal;
 
+import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronDto;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,6 +23,21 @@ public class SquadronService {
 
   private static SquadronDto toDto(Squadron squadron) {
     return new SquadronDto(
-        squadron.getName(), squadron.getShortName().orElse(null), squadron.isActive());
+        squadron.getId(), squadron.getName(), squadron.getShortName(), squadron.isActive());
+  }
+
+  public UUID createSquadron(SquadronCreateRequest request) {
+    Squadron squadron = new Squadron(request.name(), request.shortName());
+    try {
+      squadron = repository.save(squadron);
+    } catch (DataIntegrityViolationException ex) {
+      throw new ConflictException(
+          "Could not create squadron: Squadron name ("
+              + request.name()
+              + ") or short name ("
+              + request.shortName()
+              + ") already exists");
+    }
+    return squadron.getId();
   }
 }
