@@ -1,4 +1,4 @@
-package com.camelbytes.sitrep.unit.squadrons;
+package com.camelbytes.sitrep.unit.squadrons.squadron;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -8,11 +8,11 @@ import static org.mockito.Mockito.when;
 
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronDto;
-import com.camelbytes.sitrep.squadrons.internal.Squadron;
-import com.camelbytes.sitrep.squadrons.internal.SquadronCreateRequest;
-import com.camelbytes.sitrep.squadrons.internal.SquadronNotFoundException;
-import com.camelbytes.sitrep.squadrons.internal.SquadronRepository;
-import com.camelbytes.sitrep.squadrons.internal.SquadronService;
+import com.camelbytes.sitrep.squadrons.internal.squadron.Squadron;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronCreateRequest;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronNotFoundException;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronRepository;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronService;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Nested;

@@ -1,4 +1,4 @@
-package com.camelbytes.sitrep.squadrons.internal;
+package com.camelbytes.sitrep.squadrons.internal.squadron;
 
 import com.camelbytes.sitrep.shared.exceptions.NotFoundException;
 import java.util.UUID;

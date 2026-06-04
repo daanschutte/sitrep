@@ -1,8 +1,8 @@
 package com.camelbytes.sitrep.squadrons.internal.web;
 
 import com.camelbytes.sitrep.squadrons.api.SquadronDto;
-import com.camelbytes.sitrep.squadrons.internal.SquadronCreateRequest;
-import com.camelbytes.sitrep.squadrons.internal.SquadronService;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronCreateRequest;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
