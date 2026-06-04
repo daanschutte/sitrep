@@ -40,4 +40,12 @@ public class Squadron extends BaseEntity {
   public boolean isActive() {
     return isActive;
   }
+
+  public void enable() {
+    this.isActive = true;
+  }
+
+  public void disable() {
+    this.isActive = false;
+  }
 }

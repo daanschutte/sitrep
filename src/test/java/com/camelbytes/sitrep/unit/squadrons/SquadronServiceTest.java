@@ -3,12 +3,14 @@ package com.camelbytes.sitrep.unit.squadrons;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronDto;
 import com.camelbytes.sitrep.squadrons.internal.Squadron;
 import com.camelbytes.sitrep.squadrons.internal.SquadronCreateRequest;
+import com.camelbytes.sitrep.squadrons.internal.SquadronNotFoundException;
 import com.camelbytes.sitrep.squadrons.internal.SquadronRepository;
 import com.camelbytes.sitrep.squadrons.internal.SquadronService;
 import java.util.Optional;
@@ -64,6 +66,80 @@ public class SquadronServiceTest {
           .isInstanceOf(ConflictException.class)
           .hasMessageContaining(
               "Could not create squadron: Squadron name (1 Squadron) or short name (null) already exists");
+    }
+  }
+
+  @Nested
+  class EnableSquadron {
+    @Test
+    void enableSquadron_enablesSquadron() {
+      Squadron squadron = new Squadron("1 Squadron", "1SQN");
+      UUID id = UUID.randomUUID();
+      ReflectionTestUtils.setField(squadron, "id", id);
+      ReflectionTestUtils.setField(squadron, "isActive", false);
+      when(repository.findById(id)).thenReturn(Optional.of(squadron));
+
+      service.enableSquadron(id);
+
+      assertThat(squadron.isActive()).isTrue();
+      verify(repository).save(squadron);
+    }
+
+    @Test
+    void enableSquadron_alreadyEnabled_staysEnabled() {
+      Squadron squadron = new Squadron("1 Squadron", "1SQN");
+      UUID id = UUID.randomUUID();
+      ReflectionTestUtils.setField(squadron, "id", id);
+      when(repository.findById(id)).thenReturn(Optional.of(squadron));
+
+      service.enableSquadron(id);
+
+      assertThat(squadron.isActive()).isTrue();
+      verify(repository).save(squadron);
+    }
+
+    @Test
+    void enableSquadron_doesNotExist_throwsSquadronNotFoundException() {
+      when(repository.findById(any())).thenReturn(Optional.empty());
+      assertThatThrownBy(() -> service.enableSquadron(UUID.randomUUID()))
+          .isInstanceOf(SquadronNotFoundException.class);
+    }
+  }
+
+  @Nested
+  class DisableSquadron {
+    @Test
+    void disableSquadron_disablesSquadron() {
+      Squadron squadron = new Squadron("1 Squadron", "1SQN");
+      UUID id = UUID.randomUUID();
+      ReflectionTestUtils.setField(squadron, "id", id);
+      when(repository.findById(id)).thenReturn(Optional.of(squadron));
+
+      service.disableSquadron(id);
+
+      assertThat(squadron.isActive()).isFalse();
+      verify(repository).save(squadron);
+    }
+
+    @Test
+    void disableSquadron_alreadyDisabled_staysDisabled() {
+      Squadron squadron = new Squadron("1 Squadron", "1SQN");
+      UUID id = UUID.randomUUID();
+      ReflectionTestUtils.setField(squadron, "id", id);
+      ReflectionTestUtils.setField(squadron, "isActive", false);
+      when(repository.findById(id)).thenReturn(Optional.of(squadron));
+
+      service.disableSquadron(id);
+
+      assertThat(squadron.isActive()).isFalse();
+      verify(repository).save(squadron);
+    }
+
+    @Test
+    void disableSquadron_doesNotExist_throwsSquadronNotFoundException() {
+      when(repository.findById(any())).thenReturn(Optional.empty());
+      assertThatThrownBy(() -> service.disableSquadron(UUID.randomUUID()))
+          .isInstanceOf(SquadronNotFoundException.class);
     }
   }
 }

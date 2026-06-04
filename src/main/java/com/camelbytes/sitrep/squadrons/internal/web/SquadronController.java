@@ -11,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,5 +35,17 @@ public class SquadronController {
   public ResponseEntity<Void> createSquadron(@RequestBody @Valid SquadronCreateRequest request) {
     UUID createdId = service.createSquadron(request);
     return ResponseEntity.created(URI.create("/api/v1/squadrons/" + createdId)).build();
+  }
+
+  @PutMapping("/{id}/enable")
+  public ResponseEntity<Void> enableSquadron(@PathVariable UUID id) {
+    service.enableSquadron(id);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PutMapping("/{id}/disable")
+  public ResponseEntity<Void> disableSquadron(@PathVariable UUID id) {
+    service.disableSquadron(id);
+    return ResponseEntity.noContent().build();
   }
 }

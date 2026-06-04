@@ -2,6 +2,7 @@ package com.camelbytes.sitrep.unit.squadrons;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,13 +30,13 @@ public class SquadronControllerTest extends AbstractIntegrationTests {
   @Autowired private ObjectMapper objectMapper;
   @Autowired private SquadronRepository repository;
 
-  private UUID squadronId;
+  private UUID id;
 
   @BeforeEach
   void setUp() {
     Squadron squadron = new Squadron("1 Squadron", "1SQN");
     repository.save(squadron);
-    this.squadronId = squadron.getId();
+    this.id = squadron.getId();
   }
 
   @Nested
@@ -43,9 +44,9 @@ public class SquadronControllerTest extends AbstractIntegrationTests {
     @Test
     void getSquadronById_returnsSquadronDto() throws Exception {
       mockMvc
-          .perform(get("/api/v1/squadrons/{id}", squadronId))
+          .perform(get("/api/v1/squadrons/{id}", id))
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$.id").value(squadronId.toString()));
+          .andExpect(jsonPath("$.id").value(id.toString()));
     }
 
     @Test
@@ -85,7 +86,8 @@ public class SquadronControllerTest extends AbstractIntegrationTests {
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.id").value(createdId.toString()))
           .andExpect(jsonPath("$.name").value(request.name()))
-          .andExpect(jsonPath("$.shortName").value(request.shortName()));
+          .andExpect(jsonPath("$.shortName").value(request.shortName()))
+          .andExpect(jsonPath("$.isActive").value(true));
     }
 
     @Test
@@ -109,7 +111,7 @@ public class SquadronControllerTest extends AbstractIntegrationTests {
               post("/api/v1/squadrons")
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(objectMapper.writeValueAsString(request)))
-          .andExpect(status().isCreated());
+          .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -126,7 +128,7 @@ public class SquadronControllerTest extends AbstractIntegrationTests {
 
     @Test
     void createSquadron_duplicateName_returnsConflict() throws Exception {
-      SquadronCreateRequest request = new SquadronCreateRequest("1 Squadron", "");
+      SquadronCreateRequest request = new SquadronCreateRequest("1 Squadron", "1");
 
       mockMvc
           .perform(
@@ -146,6 +148,78 @@ public class SquadronControllerTest extends AbstractIntegrationTests {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(objectMapper.writeValueAsString(request)))
           .andExpect(status().isConflict());
+    }
+  }
+
+  @Nested
+  class EnableSquadron {
+    @Test
+    void enableSquadron_enablesSquadron() throws Exception {
+      mockMvc.perform(put("/api/v1/squadrons/{id}/disable", id)).andExpect(status().isNoContent());
+      mockMvc
+          .perform(get("/api/v1/squadrons/{id}", id))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(id.toString()))
+          .andExpect(jsonPath("$.isActive").value(false));
+
+      mockMvc.perform(put("/api/v1/squadrons/{id}/enable", id)).andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(get("/api/v1/squadrons/{id}", id))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(id.toString()))
+          .andExpect(jsonPath("$.isActive").value(true));
+    }
+
+    @Test
+    void enableSquadron_alreadyEnabled_returnsNoContent() throws Exception {
+      mockMvc.perform(put("/api/v1/squadrons/{id}/enable", id)).andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(get("/api/v1/squadrons/{id}", id))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(id.toString()))
+          .andExpect(jsonPath("$.isActive").value(true));
+    }
+
+    @Test
+    void enableSquadron_doesNotExist_returnsNotFound() throws Exception {
+      mockMvc
+          .perform(put("/api/v1/squadrons/{id}/enable", UUID.randomUUID()))
+          .andExpect(status().isNotFound());
+    }
+  }
+
+  @Nested
+  class DisableSquadron {
+    @Test
+    void disableSquadron_disablesSquadron() throws Exception {
+      mockMvc.perform(put("/api/v1/squadrons/{id}/disable", id)).andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(get("/api/v1/squadrons/{id}", id))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(id.toString()))
+          .andExpect(jsonPath("$.isActive").value(false));
+    }
+
+    @Test
+    void disableSquadron_alreadyDisable_returnsNoContent() throws Exception {
+      mockMvc.perform(put("/api/v1/squadrons/{id}/disable", id)).andExpect(status().isNoContent());
+      mockMvc.perform(put("/api/v1/squadrons/{id}/disable", id)).andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(get("/api/v1/squadrons/{id}", id))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(id.toString()))
+          .andExpect(jsonPath("$.isActive").value(false));
+    }
+
+    @Test
+    void disableSquadron_doesNotExist_returnsNotFound() throws Exception {
+      mockMvc
+          .perform(put("/api/v1/squadrons/{id}/disable", UUID.randomUUID()))
+          .andExpect(status().isNotFound());
     }
   }
 
