@@ -12,9 +12,9 @@ Daan writes all implementation code. Claude's role is design review, explanation
 
 ---
 
-## Where We Are (May 2026)
+## Where We Are (June 2026)
 
-Phase 0 (Foundation) is in progress on branch `daanschutte/configure-application`.
+Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module started.
 
 ---
 

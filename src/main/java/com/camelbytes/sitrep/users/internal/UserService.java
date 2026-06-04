@@ -14,11 +14,11 @@ public class UserService {
     this.repository = repository;
   }
 
-  public UserDto findById(UUID id) {
+  public UserDto getById(UUID id) {
     return repository
         .findById(id)
-        .map(UserService::fromUser)
-        .orElseThrow(() -> new UserNotFoundException(id.toString()));
+        .map(UserService::toDto)
+        .orElseThrow(() -> new UserNotFoundException(id));
   }
 
   public UUID createUser(UserCreateRequest request) {
@@ -31,7 +31,7 @@ public class UserService {
     return user.getId();
   }
 
-  private static UserDto fromUser(User user) {
+  private static UserDto toDto(User user) {
     return new UserDto(
         user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRank());
   }

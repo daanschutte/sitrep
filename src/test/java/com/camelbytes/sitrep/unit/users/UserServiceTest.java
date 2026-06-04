@@ -29,9 +29,9 @@ class UserServiceTest {
   @InjectMocks UserService service;
 
   @Nested
-  class FindById {
+  class GetById {
     @Test
-    void findById_returnsDto() {
+    void getById_returnsDto() {
       User user = new User("Chuck", "Yeager", "sonic@boom.com", "Gen");
       UUID userId = UUID.randomUUID();
       ReflectionTestUtils.setField(user, "id", userId);
@@ -41,15 +41,15 @@ class UserServiceTest {
       UserDto expected =
           new UserDto(
               userId, user.getFirstName(), user.getLastName(), user.getEmail(), user.getRank());
-      UserDto actual = service.findById(userId);
+      UserDto actual = service.getById(userId);
 
       assertThat(actual).isEqualTo(expected);
     }
 
     @Test
-    void findById_notFound_throwsUserNotFoundException() {
+    void getById_notFound_throwsUserNotFoundException() {
       when(repository.findById(any())).thenReturn(Optional.empty());
-      assertThatThrownBy(() -> service.findById(UUID.randomUUID()))
+      assertThatThrownBy(() -> service.getById(UUID.randomUUID()))
           .isInstanceOf(UserNotFoundException.class);
     }
   }
