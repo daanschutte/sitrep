@@ -2,8 +2,12 @@ package com.camelbytes.sitrep.squadrons.internal.assignment;
 
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronAssignmentDto;
+
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,18 +23,40 @@ public class SquadronAssignmentService {
     this.repository = repository;
   }
 
+  public List<SquadronAssignmentDto> getCurrentSquadronAssignmentsBySquadronId(UUID squadronId) {
+    return repository.findSquadronAssignmentsBySquadronIdAndIsCurrent(squadronId, true).stream()
+        .map(SquadronAssignmentService::toDto)
+        .toList();
+  }
+
   public SquadronAssignmentDto getSquadronAssignmentByUserId(UUID userId) {
     // TODO: include cross-squadron assignment
 
     return repository
         .findSquadronAssignmentByUserId(userId)
         .map(SquadronAssignmentService::toDto)
-        .orElseThrow(() -> new SquadronAssignmentNotFoundException(userId));
+        .orElseThrow(
+            () ->
+                new SquadronAssignmentNotFoundException(
+                    "Squadron assignment for userId=" + userId.toString() + " not found"));
   }
 
+  @Transactional
   public UUID createSquadronAssignment(SquadronAssignmentCreateRequest request) {
     SquadronAssignment assignment =
         new SquadronAssignment(request.userId(), request.squadronId(), request.role());
+
+    repository
+        .findSquadronAssignmentByUserId(request.userId())
+        .ifPresent(
+            existing -> {
+              existing.endAssignment();
+              repository.save(existing);
+              log.debug(
+                  "Existing squadron assignment with id={} ended for user={}",
+                  existing.getId(),
+                  existing.getUserId());
+            });
 
     try {
       assignment = repository.save(assignment);
@@ -56,7 +82,7 @@ public class SquadronAssignmentService {
         assignment.getId(),
         assignment.getUserId(),
         assignment.getSquadronId(),
-        Set.of(), // TODO: include cross-squadron assignment
+        Set.of(), // TODO: include guest squadron assignment
         assignment.getRole());
   }
 }
