@@ -3,6 +3,7 @@ package com.camelbytes.sitrep.squadrons.internal.assignment;
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronAssignmentDto;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -24,7 +25,7 @@ public class SquadronAssignmentService {
   }
 
   public List<SquadronAssignmentDto> getCurrentSquadronAssignmentsBySquadronId(UUID squadronId) {
-    return repository.findSquadronAssignmentsBySquadronIdAndIsCurrent(squadronId, true).stream()
+    return repository.findBySquadronIdAndEndedAtIsNull(squadronId).stream()
         .map(SquadronAssignmentService::toDto)
         .toList();
   }
@@ -33,7 +34,7 @@ public class SquadronAssignmentService {
     // TODO: include cross-squadron assignment
 
     return repository
-        .findSquadronAssignmentByUserId(userId)
+        .findByUserIdAndEndedAtIsNull(userId)
         .map(SquadronAssignmentService::toDto)
         .orElseThrow(
             () ->
@@ -42,15 +43,15 @@ public class SquadronAssignmentService {
   }
 
   @Transactional
-  public UUID createSquadronAssignment(SquadronAssignmentCreateRequest request) {
+  public UUID createSquadronAssignment(UUID squadronId, SquadronAssignmentCreateRequest request) {
     SquadronAssignment assignment =
-        new SquadronAssignment(request.userId(), request.squadronId(), request.role());
+        new SquadronAssignment(request.userId(), squadronId, request.role());
 
     repository
-        .findSquadronAssignmentByUserId(request.userId())
+        .findByUserIdAndEndedAtIsNull(request.userId())
         .ifPresent(
             existing -> {
-              existing.endAssignment();
+              existing.endAssignment(Instant.now());
               repository.save(existing);
               log.debug(
                   "Existing squadron assignment with id={} ended for user={}",
@@ -69,8 +70,7 @@ public class SquadronAssignmentService {
     } catch (DataIntegrityViolationException exception) {
       String message =
           String.format(
-              "Could not create squadron assignment for userID='%s' to squadronId='%s': already exists",
-              request.userId(), request.squadronId());
+              "Could not assign userID='%s' to squadron='%s'", request.userId(), squadronId);
       throw new ConflictException(message);
     }
 

@@ -1,4 +1,4 @@
-package com.camelbytes.sitrep.unit.squadrons.squadron;
+package com.camelbytes.sitrep.integration.squadrons.squadron;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;

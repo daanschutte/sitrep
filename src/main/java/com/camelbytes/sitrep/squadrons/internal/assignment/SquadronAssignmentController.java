@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/vi/squadrons")
+@RequestMapping("/api/v1/squadrons")
 @Validated
 public class SquadronAssignmentController {
   private final SquadronAssignmentService service;
@@ -30,15 +30,15 @@ public class SquadronAssignmentController {
     return service.getSquadronAssignmentByUserId(userId);
   }
 
-  @GetMapping("{squadronId}/assignments")
-  public List<SquadronAssignmentDto> getBySquadronId(@PathVariable UUID squadronId) {
-    return service.getCurrentSquadronAssignmentsBySquadronId(squadronId);
+  @GetMapping("/{id}/assignments")
+  public List<SquadronAssignmentDto> getBySquadronId(@PathVariable UUID id) {
+    return service.getCurrentSquadronAssignmentsBySquadronId(id);
   }
 
-  @PostMapping
+  @PostMapping("/{id}/assignments")
   public ResponseEntity<Void> createSquadronAssignment(
-      @RequestBody @Valid SquadronAssignmentCreateRequest request) {
-    UUID createdId = service.createSquadronAssignment(request);
+      @PathVariable UUID id, @RequestBody @Valid SquadronAssignmentCreateRequest request) {
+    UUID createdId = service.createSquadronAssignment(id, request);
     return ResponseEntity.created(URI.create("/api/v1/squadrons/" + createdId + "/assignments"))
         .build();
   }

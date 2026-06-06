@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -22,9 +23,6 @@ public class SquadronAssignment extends BaseEntity {
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
   private SquadronRole role;
-
-  @Column(nullable = false)
-  private boolean isCurrent = true;
 
   private Instant endedAt;
 
@@ -48,8 +46,11 @@ public class SquadronAssignment extends BaseEntity {
     return role;
   }
 
-  public void endAssignment() {
-    isCurrent = false;
-    endedAt = Instant.now();
+  public void endAssignment(Instant endedAt) {
+    this.endedAt = endedAt;
+  }
+
+  public Optional<Instant> getEndedAt() {
+    return Optional.ofNullable(endedAt);
   }
 }

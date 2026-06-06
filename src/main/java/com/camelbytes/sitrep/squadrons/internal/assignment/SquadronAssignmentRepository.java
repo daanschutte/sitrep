@@ -6,8 +6,9 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SquadronAssignmentRepository extends JpaRepository<SquadronAssignment, UUID> {
-  Optional<SquadronAssignment> findSquadronAssignmentByUserId(UUID id);
+  Optional<SquadronAssignment> findByUserId(UUID id);
 
-  List<SquadronAssignment> findSquadronAssignmentsBySquadronIdAndIsCurrent(
-      UUID squadronId, boolean isCurrent);
+  Optional<SquadronAssignment> findByUserIdAndEndedAtIsNull(UUID uuid);
+
+  List<SquadronAssignment> findBySquadronIdAndEndedAtIsNull(UUID squadronId);
 }

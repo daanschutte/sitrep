@@ -4,7 +4,6 @@ CREATE TABLE squadron_assignment
     user_id     UUID        NOT NULL REFERENCES users (id),
     squadron_id UUID        NOT NULL REFERENCES squadron (id),
     role        VARCHAR(32) NOT NULL,
-    is_current  BOOLEAN     NOT NULL DEFAULT TRUE,
     started_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     ended_at    TIMESTAMPTZ,
     version     BIGINT,
@@ -12,7 +11,8 @@ CREATE TABLE squadron_assignment
     updated_at  TIMESTAMPTZ NOT NULL
 );
 
-CREATE UNIQUE INDEX idx_user_id_is_current ON squadron_assignment (user_id) WHERE is_current;
+CREATE UNIQUE INDEX idx_user_current_squadron_assignment
+    ON squadron_assignment (user_id) WHERE ended_at IS NULL;
 
 CREATE TABLE squadron_guest_access
 (
