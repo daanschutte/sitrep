@@ -5,6 +5,6 @@ import java.util.UUID;
 
 public class SquadronNotFoundException extends NotFoundException {
   public SquadronNotFoundException(UUID id) {
-    super("Squadron", id.toString());
+    super("Squadron", id);
   }
 }

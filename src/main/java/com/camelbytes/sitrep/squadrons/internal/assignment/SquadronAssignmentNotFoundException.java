@@ -5,6 +5,10 @@ import java.util.UUID;
 
 public class SquadronAssignmentNotFoundException extends NotFoundException {
   public SquadronAssignmentNotFoundException(UUID userId) {
-    super("Squadron assignment for userId=" + userId.toString() + " not found");
+    super("SquadronAssignment", userId);
+  }
+
+  public SquadronAssignmentNotFoundException(String message) {
+    super(message);
   }
 }
