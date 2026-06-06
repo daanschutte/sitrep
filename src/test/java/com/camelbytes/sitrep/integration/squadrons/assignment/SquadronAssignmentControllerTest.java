@@ -1,5 +1,6 @@
 package com.camelbytes.sitrep.integration.squadrons.assignment;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.camelbytes.sitrep.AbstractIntegrationTests;
 import com.camelbytes.sitrep.squadrons.api.SquadronRole;
 import com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignment;
+import com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest;
 import com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignmentRepository;
 import com.camelbytes.sitrep.squadrons.internal.squadron.Squadron;
 import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronRepository;
@@ -23,6 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
@@ -52,7 +55,8 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
   class GetByUserId {
     @Test
     void getByUserId_returnsAssignment() throws Exception {
-      SquadronAssignment assignment = new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
+      SquadronAssignment assignment =
+          new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
       assignmentRepository.save(assignment);
 
       mockMvc
@@ -66,7 +70,8 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
     @Test
     void getByUserId_notFound_returnsNotFound() throws Exception {
       mockMvc
-          .perform(get("/api/v1/squadrons/assignments").param("userId", UUID.randomUUID().toString()))
+          .perform(
+              get("/api/v1/squadrons/assignments").param("userId", UUID.randomUUID().toString()))
           .andExpect(status().isNotFound());
     }
   }
@@ -75,11 +80,12 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
   class GetBySquadronId {
     @Test
     void getBySquadronId_returnsCurrentAssignments() throws Exception {
-      SquadronAssignment assignment = new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
+      SquadronAssignment assignment =
+          new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
       assignmentRepository.save(assignment);
 
       mockMvc
-          .perform(get("/api/v1/squadrons/{id}/assignments", squadronId))
+          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$[0].userId").value(userId.toString()));
     }
@@ -87,7 +93,7 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
     @Test
     void getBySquadronId_noAssignments_returnsEmptyList() throws Exception {
       mockMvc
-          .perform(get("/api/v1/squadrons/{id}/assignments", squadronId))
+          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$").isEmpty());
     }
@@ -97,31 +103,40 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
   class CreateSquadronAssignment {
     @Test
     void createSquadronAssignment_creates_returnsCreated() throws Exception {
-      String body = objectMapper.writeValueAsString(
-          new com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest(
-              userId, SquadronRole.STUDENT));
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
 
-      mockMvc
-          .perform(post("/api/v1/squadrons/{id}/assignments", squadronId)
-              .contentType(MediaType.APPLICATION_JSON)
-              .content(body))
-          .andExpect(status().isCreated());
+      MvcResult result =
+          mockMvc
+              .perform(
+                  post("/api/v1/squadrons/{squadronId}/assignments", squadronId)
+                      .contentType(MediaType.APPLICATION_JSON)
+                      .content(body))
+              .andExpect(status().isCreated())
+              .andReturn();
+
+      String location = result.getResponse().getHeader("Location");
+      String expected = String.format("/api/v1/squadrons/%s/assignments", squadronId);
+      assertThat(location).contains(expected);
     }
 
     @Test
     void createSquadronAssignment_transfersExisting_returnsCreated() throws Exception {
-      SquadronAssignment existing = new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
+      SquadronAssignment existing =
+          new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
       assignmentRepository.save(existing);
 
       UUID newSquadronId = squadronRepository.save(new Squadron("2 Squadron", "2SQN")).getId();
-      String body = objectMapper.writeValueAsString(
-          new com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest(
-              userId, SquadronRole.STUDENT));
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
 
       mockMvc
-          .perform(post("/api/v1/squadrons/{id}/assignments", newSquadronId)
-              .contentType(MediaType.APPLICATION_JSON)
-              .content(body))
+          .perform(
+              post("/api/v1/squadrons/{squadronId}/assignments", newSquadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
           .andExpect(status().isCreated());
     }
   }

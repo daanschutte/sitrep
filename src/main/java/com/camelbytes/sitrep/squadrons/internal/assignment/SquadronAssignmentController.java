@@ -30,16 +30,16 @@ public class SquadronAssignmentController {
     return service.getSquadronAssignmentByUserId(userId);
   }
 
-  @GetMapping("/{id}/assignments")
-  public List<SquadronAssignmentDto> getBySquadronId(@PathVariable UUID id) {
-    return service.getCurrentSquadronAssignmentsBySquadronId(id);
+  @GetMapping("/{squadronId}/assignments")
+  public List<SquadronAssignmentDto> getBySquadronId(@PathVariable UUID squadronId) {
+    return service.getCurrentSquadronAssignmentsBySquadronId(squadronId);
   }
 
-  @PostMapping("/{id}/assignments")
+  @PostMapping("/{squadronId}/assignments")
   public ResponseEntity<Void> createSquadronAssignment(
-      @PathVariable UUID id, @RequestBody @Valid SquadronAssignmentCreateRequest request) {
-    UUID createdId = service.createSquadronAssignment(id, request);
-    return ResponseEntity.created(URI.create("/api/v1/squadrons/" + createdId + "/assignments"))
+      @PathVariable UUID squadronId, @RequestBody @Valid SquadronAssignmentCreateRequest request) {
+    service.createSquadronAssignment(squadronId, request);
+    return ResponseEntity.created(URI.create("/api/v1/squadrons/" + squadronId + "/assignments"))
         .build();
   }
 }

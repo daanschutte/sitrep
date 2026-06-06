@@ -39,7 +39,8 @@ class SquadronAssignmentServiceTest {
       UUID userId = UUID.randomUUID();
       UUID squadronId = UUID.randomUUID();
 
-      SquadronAssignment assignment = new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
+      SquadronAssignment assignment =
+          new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
       ReflectionTestUtils.setField(assignment, "id", id);
 
       when(repository.findByUserIdAndEndedAtIsNull(userId)).thenReturn(Optional.of(assignment));
@@ -69,13 +70,16 @@ class SquadronAssignmentServiceTest {
       SquadronAssignmentCreateRequest request =
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
 
-      SquadronAssignment existing = new SquadronAssignment(request.userId(), UUID.randomUUID(), SquadronRole.INSTRUCTOR);
+      SquadronAssignment existing =
+          new SquadronAssignment(request.userId(), UUID.randomUUID(), SquadronRole.INSTRUCTOR);
       ReflectionTestUtils.setField(existing, "id", UUID.randomUUID());
 
-      SquadronAssignment saved = new SquadronAssignment(request.userId(), squadronId, request.role());
+      SquadronAssignment saved =
+          new SquadronAssignment(request.userId(), squadronId, request.role());
       ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
 
-      when(repository.findByUserIdAndEndedAtIsNull(request.userId())).thenReturn(Optional.of(existing));
+      when(repository.findByUserIdAndEndedAtIsNull(request.userId()))
+          .thenReturn(Optional.of(existing));
       when(repository.save(any())).thenReturn(saved);
 
       service.createSquadronAssignment(squadronId, request);

@@ -2,13 +2,11 @@ package com.camelbytes.sitrep.squadrons.internal.assignment;
 
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronAssignmentDto;
-
+import jakarta.transaction.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-
-import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -49,15 +47,16 @@ public class SquadronAssignmentService {
 
     repository
         .findByUserIdAndEndedAtIsNull(request.userId())
-        .ifPresent(
+        .ifPresentOrElse(
             existing -> {
               existing.endAssignment(Instant.now());
-              repository.save(existing);
+              repository.saveAndFlush(existing);
               log.debug(
                   "Existing squadron assignment with id={} ended for user={}",
                   existing.getId(),
                   existing.getUserId());
-            });
+            },
+            () -> log.debug("No existing squadron assignments for userId={}", request.userId()));
 
     try {
       assignment = repository.save(assignment);
