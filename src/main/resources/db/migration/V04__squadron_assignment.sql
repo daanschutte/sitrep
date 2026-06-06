@@ -14,11 +14,12 @@ CREATE TABLE squadron_assignment
 
 CREATE UNIQUE INDEX idx_user_id_is_current ON squadron_assignment (user_id) WHERE is_current;
 
-CREATE TABLE cross_squadron_grant
+CREATE TABLE squadron_guest_access
 (
     id          UUID PRIMARY KEY,
     user_id     UUID        NOT NULL REFERENCES users (id),
     squadron_id UUID        NOT NULL REFERENCES squadron (id),
+    role        VARCHAR(32) NOT NULL,
     granted_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     revoked_at  TIMESTAMPTZ,
     version     BIGINT,
