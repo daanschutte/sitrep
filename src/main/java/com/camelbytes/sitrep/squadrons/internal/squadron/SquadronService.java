@@ -2,21 +2,30 @@ package com.camelbytes.sitrep.squadrons.internal.squadron;
 
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronDto;
-import jakarta.transaction.Transactional;
 import java.util.UUID;
+
+import com.camelbytes.sitrep.squadrons.api.SquadronQueryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class SquadronService {
+public class SquadronService implements SquadronQueryService {
   private static final Logger log = LoggerFactory.getLogger(SquadronService.class);
 
   private final SquadronRepository repository;
 
   public SquadronService(SquadronRepository repository) {
     this.repository = repository;
+  }
+
+  @Override
+  public void validateSquadronExists(UUID squadronId) {
+    if (!repository.existsById(squadronId)) {
+      throw new SquadronNotFoundException(squadronId);
+    }
   }
 
   public SquadronDto getById(UUID id) {
