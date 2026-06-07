@@ -20,15 +20,15 @@ public class SquadronAssignmentService {
   private static final Logger log = LoggerFactory.getLogger(SquadronAssignmentService.class);
 
   private final SquadronAssignmentRepository repository;
-  private final SquadronService squadronService;
+  private final SquadronQueryService squadronQueryService;
   private final UserQueryService userQueryService;
 
   public SquadronAssignmentService(
       SquadronAssignmentRepository repository,
-      SquadronService squadronService,
+      SquadronQueryService squadronQueryService,
       UserQueryService userQueryService) {
     this.repository = repository;
-    this.squadronService = squadronService;
+    this.squadronQueryService = squadronQueryService;
     this.userQueryService = userQueryService;
   }
 
@@ -52,7 +52,7 @@ public class SquadronAssignmentService {
 
   @Transactional
   public void createSquadronAssignment(UUID squadronId, SquadronAssignmentCreateRequest request) {
-    squadronService.validateSquadronExists(squadronId);
+    squadronQueryService.validateSquadronExists(squadronId);
     userQueryService.validateUserExists(request.userId());
 
     SquadronAssignment assignment =

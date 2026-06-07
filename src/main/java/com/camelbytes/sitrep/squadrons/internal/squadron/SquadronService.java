@@ -52,7 +52,7 @@ public class SquadronService implements SquadronQueryService {
   }
 
   @Transactional
-  public void enableSquadron(UUID id) throws SquadronNotFoundException {
+  public void enableSquadron(UUID id) {
     log.debug("Enabling squadron with id={}", id);
     Squadron squadron =
         repository.findById(id).orElseThrow(() -> new SquadronNotFoundException(id));
@@ -63,7 +63,7 @@ public class SquadronService implements SquadronQueryService {
   }
 
   @Transactional
-  public void disableSquadron(UUID id) throws SquadronNotFoundException {
+  public void disableSquadron(UUID id) {
     log.debug("Disabling squadron with id={}", id);
     Squadron squadron =
         repository.findById(id).orElseThrow(() -> new SquadronNotFoundException(id));
