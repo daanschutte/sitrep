@@ -103,7 +103,7 @@ public class SquadronControllerTest extends AbstractIntegrationTests {
     }
 
     @Test
-    void createSquadron_emptyShortName_createsSquadron() throws Exception {
+    void createSquadron_emptyShortName_returnsUnprocessableContent() throws Exception {
       SquadronCreateRequest request = new SquadronCreateRequest("2 Squadron", "");
 
       mockMvc

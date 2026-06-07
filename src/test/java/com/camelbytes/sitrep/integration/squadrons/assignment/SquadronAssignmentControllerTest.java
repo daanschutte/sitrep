@@ -15,6 +15,7 @@ import com.camelbytes.sitrep.squadrons.internal.squadron.Squadron;
 import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronRepository;
 import com.camelbytes.sitrep.users.internal.User;
 import com.camelbytes.sitrep.users.internal.UserRepository;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,18 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
           .perform(
               get("/api/v1/squadrons/assignments").param("userId", UUID.randomUUID().toString()))
           .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getByUserId_missingParam_returnsBadRequest() throws Exception {
+      mockMvc.perform(get("/api/v1/squadrons/assignments")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getByUserId_malformedUuid_returnsBadRequest() throws Exception {
+      mockMvc
+          .perform(get("/api/v1/squadrons/assignments").param("userId", "not-a-uuid"))
+          .andExpect(status().isBadRequest());
     }
   }
 
@@ -138,6 +151,80 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(body))
           .andExpect(status().isCreated());
+
+      // Verify state: old assignment should be ended
+      SquadronAssignment updatedExisting =
+          assignmentRepository.findById(existing.getId()).orElseThrow();
+      assertThat(updatedExisting.getEndedAt()).isPresent();
+
+      // Verify state: new assignment should be current
+      List<SquadronAssignment> currentAssignments =
+          assignmentRepository.findByUserIdAndEndedAtIsNull(userId).stream().toList();
+      assertThat(currentAssignments.size()).isEqualTo(1);
+      assertThat(currentAssignments.getFirst().getSquadronId()).isEqualTo(newSquadronId);
+    }
+
+    @Test
+    void createSquadronAssignment_nonExistentUser_returnsNotFound() throws Exception {
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              post("/api/v1/squadrons/{squadronId}/assignments", squadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createSquadronAssignment_nonExistentSquadron_returnsNotFound() throws Exception {
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              post("/api/v1/squadrons/{squadronId}/assignments", UUID.randomUUID())
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createSquadronAssignment_invalidBody_returnsUnprocessableContent() throws Exception {
+      String nullUserId = "{\"userId\": null, \"role\": \"STUDENT\"}";
+
+      mockMvc
+          .perform(
+              post("/api/v1/squadrons/{squadronId}/assignments", squadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(nullUserId))
+          .andExpect(status().isUnprocessableContent());
+
+      String nullRole = String.format("{\"userId\": \"%s\", \"role\": null}", userId);
+
+      mockMvc
+          .perform(
+              post("/api/v1/squadrons/{squadronId}/assignments", squadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(nullRole))
+          .andExpect(status().isUnprocessableContent());
+    }
+
+    @Test
+    void createSquadronAssignment_malformedUuid_returnsBadRequest() throws Exception {
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              post("/api/v1/squadrons/{squadronId}/assignments", "not-a-uuid")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isBadRequest());
     }
   }
 
