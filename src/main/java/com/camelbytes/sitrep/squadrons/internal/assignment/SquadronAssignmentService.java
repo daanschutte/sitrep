@@ -3,7 +3,6 @@ package com.camelbytes.sitrep.squadrons.internal.assignment;
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronAssignmentDto;
 import com.camelbytes.sitrep.squadrons.api.SquadronQueryService;
-import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronService;
 import com.camelbytes.sitrep.users.api.UserQueryService;
 import java.time.Instant;
 import java.util.List;

@@ -22,7 +22,6 @@ import com.camelbytes.sitrep.users.api.UserQueryService;
 import com.camelbytes.sitrep.users.internal.UserNotFoundException;
 import com.camelbytes.sitrep.users.internal.UserRepository;
 import com.camelbytes.sitrep.users.internal.UserService;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;

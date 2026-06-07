@@ -2,9 +2,8 @@ package com.camelbytes.sitrep.squadrons.internal.squadron;
 
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronDto;
-import java.util.UUID;
-
 import com.camelbytes.sitrep.squadrons.api.SquadronQueryService;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
