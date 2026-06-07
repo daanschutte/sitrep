@@ -2,7 +2,9 @@ package com.camelbytes.sitrep.squadrons.internal.assignment;
 
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronAssignmentDto;
-import jakarta.transaction.Transactional;
+import com.camelbytes.sitrep.squadrons.api.SquadronQueryService;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronService;
+import com.camelbytes.sitrep.users.api.UserQueryService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -11,15 +13,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SquadronAssignmentService {
   private static final Logger log = LoggerFactory.getLogger(SquadronAssignmentService.class);
 
   private final SquadronAssignmentRepository repository;
+  private final SquadronService squadronService;
+  private final UserQueryService userQueryService;
 
-  public SquadronAssignmentService(SquadronAssignmentRepository repository) {
+  public SquadronAssignmentService(
+      SquadronAssignmentRepository repository,
+      SquadronService squadronService,
+      UserQueryService userQueryService) {
     this.repository = repository;
+    this.squadronService = squadronService;
+    this.userQueryService = userQueryService;
   }
 
   public List<SquadronAssignmentDto> getCurrentSquadronAssignmentsBySquadronId(UUID squadronId) {
@@ -41,7 +51,10 @@ public class SquadronAssignmentService {
   }
 
   @Transactional
-  public UUID createSquadronAssignment(UUID squadronId, SquadronAssignmentCreateRequest request) {
+  public void createSquadronAssignment(UUID squadronId, SquadronAssignmentCreateRequest request) {
+    squadronService.validateSquadronExists(squadronId);
+    userQueryService.validateUserExists(request.userId());
+
     SquadronAssignment assignment =
         new SquadronAssignment(request.userId(), squadronId, request.role());
 
@@ -72,8 +85,6 @@ public class SquadronAssignmentService {
               "Could not assign userID='%s' to squadron='%s'", request.userId(), squadronId);
       throw new ConflictException(message);
     }
-
-    return assignment.getId();
   }
 
   private static SquadronAssignmentDto toDto(SquadronAssignment assignment) {

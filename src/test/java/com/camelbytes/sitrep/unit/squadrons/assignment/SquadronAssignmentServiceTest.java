@@ -3,6 +3,7 @@ package com.camelbytes.sitrep.unit.squadrons.assignment;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +15,8 @@ import com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignmentCre
 import com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignmentNotFoundException;
 import com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignmentRepository;
 import com.camelbytes.sitrep.squadrons.internal.assignment.SquadronAssignmentService;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronService;
+import com.camelbytes.sitrep.users.api.UserQueryService;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -28,7 +31,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class SquadronAssignmentServiceTest {
+  @Mock SquadronService squadronService;
+
   @Mock SquadronAssignmentRepository repository;
+  @Mock UserQueryService userQueryService;
   @InjectMocks SquadronAssignmentService service;
 
   @Nested
@@ -78,6 +84,8 @@ class SquadronAssignmentServiceTest {
           new SquadronAssignment(request.userId(), squadronId, request.role());
       ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
 
+      doNothing().when(squadronService).validateSquadronExists(squadronId);
+      doNothing().when(userQueryService).validateUserExists(request.userId());
       when(repository.findByUserIdAndEndedAtIsNull(request.userId()))
           .thenReturn(Optional.of(existing));
       when(repository.save(any())).thenReturn(saved);
@@ -85,7 +93,7 @@ class SquadronAssignmentServiceTest {
       service.createSquadronAssignment(squadronId, request);
 
       assertThat(existing.getEndedAt()).isNotEmpty();
-      verify(repository).save(existing);
+      verify(repository).saveAndFlush(existing);
     }
 
     @Test
@@ -93,7 +101,8 @@ class SquadronAssignmentServiceTest {
       UUID squadronId = UUID.randomUUID();
       SquadronAssignmentCreateRequest request =
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
-
+      doNothing().when(squadronService).validateSquadronExists(squadronId);
+      doNothing().when(userQueryService).validateUserExists(request.userId());
       when(repository.findByUserIdAndEndedAtIsNull(request.userId())).thenReturn(Optional.empty());
       when(repository.save(any())).thenThrow(new DataIntegrityViolationException(""));
 
