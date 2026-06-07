@@ -40,12 +40,11 @@ public class SquadronService implements SquadronQueryService {
       squadron = repository.save(squadron);
       log.debug("Squadron with id={} created", squadron.getId());
     } catch (DataIntegrityViolationException ex) {
-      throw new ConflictException(
-          "Could not create squadron: Squadron name ("
-              + request.name()
-              + ") or short name ("
-              + request.shortName()
-              + ") already exists");
+      String message =
+          String.format(
+              "Could not create squadron: Squadron name (%s) or short name (%s) already exists",
+              request.name(), request.shortName());
+      throw new ConflictException(message);
     }
     return squadron.getId();
   }
