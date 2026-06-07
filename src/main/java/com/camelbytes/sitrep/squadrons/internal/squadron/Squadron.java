@@ -15,6 +15,7 @@ public class Squadron extends BaseEntity {
   @Column(unique = true)
   private String shortName;
 
+  @Column(nullable = false)
   private boolean isActive;
 
   protected Squadron() {}
