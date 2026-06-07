@@ -1,4 +1,4 @@
-package com.camelbytes.sitrep.squadrons.internal;
+package com.camelbytes.sitrep.squadrons.internal.squadron;
 
 import com.camelbytes.sitrep.shared.domain.BaseEntity;
 import jakarta.persistence.Column;
@@ -15,6 +15,7 @@ public class Squadron extends BaseEntity {
   @Column(unique = true)
   private String shortName;
 
+  @Column(nullable = false)
   private boolean isActive;
 
   protected Squadron() {}

@@ -11,12 +11,12 @@ import org.springframework.web.bind.annotation.RestController;
 @AnalyzeClasses(packages = "com.camelbytes.sitrep")
 public class LocationRulesTests {
   @ArchTest
-  static final ArchRule controllers_shouldLiveInPackage_internalWeb =
+  static final ArchRule controllers_shouldLiveInPackage_internal =
       classes()
           .that()
           .areAnnotatedWith(RestController.class)
           .should()
-          .resideInAPackage("..internal.web..")
+          .resideInAPackage("..internal..")
           .allowEmptyShould(true);
 
   @ArchTest
@@ -26,5 +26,14 @@ public class LocationRulesTests {
           .areAnnotatedWith(Service.class)
           .should()
           .resideInAPackage("..internal..")
+          .allowEmptyShould(true);
+
+  @ArchTest
+  static final ArchRule dtos_shouldLiveInPackage_api =
+      classes()
+          .that()
+          .haveSimpleNameEndingWith("Dto")
+          .should()
+          .resideInAPackage("..api")
           .allowEmptyShould(true);
 }

@@ -1,4 +1,4 @@
-package com.camelbytes.sitrep.unit.squadrons;
+package com.camelbytes.sitrep.integration.squadrons.squadron;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -7,9 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.camelbytes.sitrep.AbstractIntegrationTests;
-import com.camelbytes.sitrep.squadrons.internal.Squadron;
-import com.camelbytes.sitrep.squadrons.internal.SquadronCreateRequest;
-import com.camelbytes.sitrep.squadrons.internal.SquadronRepository;
+import com.camelbytes.sitrep.squadrons.internal.squadron.Squadron;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronCreateRequest;
+import com.camelbytes.sitrep.squadrons.internal.squadron.SquadronRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,7 +103,7 @@ public class SquadronControllerTest extends AbstractIntegrationTests {
     }
 
     @Test
-    void createSquadron_emptyShortName_createsSquadron() throws Exception {
+    void createSquadron_emptyShortName_returnsUnprocessableContent() throws Exception {
       SquadronCreateRequest request = new SquadronCreateRequest("2 Squadron", "");
 
       mockMvc

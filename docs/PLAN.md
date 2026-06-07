@@ -1,6 +1,6 @@
 # Sitrep — Development Plan
 
-*Last updated: May 2026. Living document — update as decisions land.*
+*Last updated: June 2026. Living document — update as decisions land.*
 
 ---
 
@@ -14,7 +14,7 @@ Daan writes all implementation code. Claude's role is design review, explanation
 
 ## Where We Are (June 2026)
 
-Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module started.
+Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module in progress (`Squadron`, `SquadronAssignment`, `SquadronGuestAccess` entities, CRUD + enable/disable + assignment endpoints, migrations V01–V04, `SquadronQueryService` and `UserQueryService` cross-module interfaces wired).
 
 ---
 
@@ -34,7 +34,7 @@ See the spec for full rationale. Summary:
 - **Package root**: `com.camelbytes.sitrep`
 - **No**: Lombok, H2, field injection, Spring Statemachine, Debezium or outbox libraries, JJWT, MapStruct, pgAdmin
 - **Container**: Docker multi-stage, `eclipse-temurin:21-jre`, non-root
-- **Logging**: SLF4J + Logback + `logstash-logback-encoder` (add when `logback-spring.xml` is written). JSON to stdout.
+- **Logging**: SLF4J + Logback + `logstash-logback-encoder` (runtime scope). JSON to stdout via `logback-spring.xml`. Human-readable in `dev` and `test` profiles; `logback-test.xml` in `src/test/resources` for unit tests.
 - **Tracing**: `micrometer-tracing-bridge-brave` (add in Phase 1 when MDC filter is wired). Provides `traceId`/`spanId`.
 - **Caffeine**: Add in Phase 8 (Currency) when first needed.
 - **Add dependencies when first needed** — don't add upfront.
@@ -62,7 +62,9 @@ audit        (→ outbox — consumer only; domain modules never call audit dire
 printing     (→ scheduling, users — read-only consumer)
 ```
 
-Each module has `api/` (exposed to other modules) and `internal/` (Modulith-enforced private). `shared` has neither — its sub-packages (`domain/`, `config/`, `security/`) are open to all.
+Each module has `api/` (exposed to other modules) and `internal/` (Modulith-enforced private). `shared` is marked `@ApplicationModule(type = OPEN)` — all its types are accessible to all modules. Controllers live flat in `internal/` alongside services and entities — no `web/` sub-package.
+
+**Modulith named interface syntax**: `api/` packages must have a `package-info.java` with `@NamedInterface`. `allowedDependencies` must reference them as `"moduleName::api"`, not just `"moduleName"` — the bare module name does not resolve to the `api` sub-package.
 
 ---
 
@@ -95,8 +97,7 @@ Each phase ends with: green CI, `./mvnw verify` clean, updated OpenAPI checked i
 - `BaseEntity.equals()` — fixed to use `instanceof` pattern matching ✓
 - `Dockerfile` — multi-stage, Maven build inside Docker, `bellsoft/liberica-openjre-debian:25-cds`, non-root ✓
 
-**Remaining:**
-- GitHub Actions CI — build → Spotless → test
+**Complete.** ✓
 
 **What this teaches:** Spring Boot 4 project layout, Spring Modulith bootstrap, Testcontainers wiring, RLS role separation, stateless JWT security baseline, twelve-factor config.
 
@@ -112,7 +113,7 @@ Each phase ends with: green CI, `./mvnw verify` clean, updated OpenAPI checked i
 
 **Endpoints:** per spec §B.3
 
-**Migrations:** per spec §B.4 (each module creates its own schema as part of its first migration)
+**Migrations:** per spec §B.4. Schema decision revised — only `audit` schema kept; all domain tables in `public`. Role creation in `docker/init/init.sh`; V1 creates audit schema and grants only.
 
 **Key deliverables:**
 - `users`, `squadrons`, `auth` modules — CRUD and full auth flow

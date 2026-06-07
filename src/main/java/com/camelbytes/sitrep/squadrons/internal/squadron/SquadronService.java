@@ -1,22 +1,30 @@
-package com.camelbytes.sitrep.squadrons.internal;
+package com.camelbytes.sitrep.squadrons.internal.squadron;
 
 import com.camelbytes.sitrep.shared.exceptions.ConflictException;
 import com.camelbytes.sitrep.squadrons.api.SquadronDto;
-import jakarta.transaction.Transactional;
+import com.camelbytes.sitrep.squadrons.api.SquadronQueryService;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class SquadronService {
+public class SquadronService implements SquadronQueryService {
   private static final Logger log = LoggerFactory.getLogger(SquadronService.class);
 
   private final SquadronRepository repository;
 
   public SquadronService(SquadronRepository repository) {
     this.repository = repository;
+  }
+
+  @Override
+  public void validateSquadronExists(UUID squadronId) {
+    if (!repository.existsById(squadronId)) {
+      throw new SquadronNotFoundException(squadronId);
+    }
   }
 
   public SquadronDto getById(UUID id) {
@@ -32,18 +40,17 @@ public class SquadronService {
       squadron = repository.save(squadron);
       log.debug("Squadron with id={} created", squadron.getId());
     } catch (DataIntegrityViolationException ex) {
-      throw new ConflictException(
-          "Could not create squadron: Squadron name ("
-              + request.name()
-              + ") or short name ("
-              + request.shortName()
-              + ") already exists");
+      String message =
+          String.format(
+              "Could not create squadron: Squadron name (%s) or short name (%s) already exists",
+              request.name(), request.shortName());
+      throw new ConflictException(message);
     }
     return squadron.getId();
   }
 
   @Transactional
-  public void enableSquadron(UUID id) throws SquadronNotFoundException {
+  public void enableSquadron(UUID id) {
     log.debug("Enabling squadron with id={}", id);
     Squadron squadron =
         repository.findById(id).orElseThrow(() -> new SquadronNotFoundException(id));
@@ -54,7 +61,7 @@ public class SquadronService {
   }
 
   @Transactional
-  public void disableSquadron(UUID id) throws SquadronNotFoundException {
+  public void disableSquadron(UUID id) {
     log.debug("Disabling squadron with id={}", id);
     Squadron squadron =
         repository.findById(id).orElseThrow(() -> new SquadronNotFoundException(id));

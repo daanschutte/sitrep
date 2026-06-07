@@ -253,29 +253,30 @@ Not RLS-scoped. The `User` entity exposes `activate()`, `deactivate()`, and `cha
 
 #### `squadrons.Squadron`
 - `id UUID PK`
-- `code VARCHAR(16) UNIQUE NOT NULL` (e.g. "1SQN")
-- `name VARCHAR(128) NOT NULL`
-- `active BOOLEAN NOT NULL DEFAULT true`
+- `name VARCHAR(100) NOT NULL`
+- `short_name VARCHAR(16) UNIQUE` nullable (e.g. "1SQN")
+- `is_active BOOLEAN NOT NULL DEFAULT true`
 
-Not RLS-scoped (squadron metadata is global).
+Not RLS-scoped (squadron metadata is global). `enable()` / `disable()` domain methods. `short_name` replaces the original `code` field — more self-documenting.
 
 #### `squadrons.SquadronAssignment`
 - `id UUID PK`
 - `user_id UUID FK -> users.user`
 - `squadron_id UUID FK -> squadrons.squadron`
-- `role VARCHAR(32) NOT NULL` — enum: ADMIN, MANAGER, PLANNER, INSTRUCTOR, STUDENT, OPS
-- `is_current BOOLEAN NOT NULL` — exactly one true per user, enforced by partial unique index: `CREATE UNIQUE INDEX ON squadron_assignment(user_id) WHERE is_current`
-- `started_at TIMESTAMP WITH TIME ZONE NOT NULL`, `ended_at TIMESTAMP WITH TIME ZONE` nullable
+- `role VARCHAR(32) NOT NULL` — enum: ADMIN, MANAGER, PLANNER, INSTRUCTOR, STUDENT, OPS, BASIC
+- `started_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `ended_at TIMESTAMPTZ` nullable
+- Partial unique index: `CREATE UNIQUE INDEX ON squadron_assignment(user_id) WHERE ended_at IS NULL`
 
-Not RLS-scoped — this is the *assignment* of users to tenants, so it must be visible cross-tenant for admins and the auth flow.
+`ended_at IS NULL` replaces the `is_current` boolean — single source of truth. Transfer logic: end existing assignment (`saveAndFlush`), insert new one in same `@Transactional`. Not RLS-scoped.
 
-#### `squadrons.CrossSquadronGrant`
+#### `squadrons.SquadronGuestAccess`
 - `id UUID PK`
 - `user_id UUID FK -> users.user`
 - `squadron_id UUID FK -> squadrons.squadron` (the squadron they're granted access to)
-- `granted_at TIMESTAMP WITH TIME ZONE NOT NULL`, `revoked_at TIMESTAMP WITH TIME ZONE` nullable
+- `role VARCHAR(32) NOT NULL` — the role the user holds in the guest squadron
+- `granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `revoked_at TIMESTAMPTZ` nullable
 
-Used when building `accessible_squadrons` claim at login. Not RLS-scoped.
+Replaces `CrossSquadronGrant`. Adds `role` field. Used when building `accessible_squadrons` claim at login. Not RLS-scoped.
 
 #### `auth.RefreshToken`
 - `id UUID PK`

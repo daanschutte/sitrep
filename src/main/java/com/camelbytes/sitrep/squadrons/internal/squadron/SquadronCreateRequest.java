@@ -1,4 +1,4 @@
-package com.camelbytes.sitrep.squadrons.internal;
+package com.camelbytes.sitrep.squadrons.internal.squadron;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

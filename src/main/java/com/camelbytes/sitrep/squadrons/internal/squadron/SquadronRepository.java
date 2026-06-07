@@ -1,4 +1,4 @@
-package com.camelbytes.sitrep.squadrons.internal;
+package com.camelbytes.sitrep.squadrons.internal.squadron;
 
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
