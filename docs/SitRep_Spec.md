@@ -40,7 +40,7 @@ Companion to the Functional Design. This document covers the **technical** appro
 
 ### A.3 Module Map
 
-Each module is a top-level package under `com.camelbytes.sitrep.<module>`. Spring Modulith enforces that modules only depend on other modules' explicitly exposed `api` sub-packages, not their `internal` packages.
+Each module is a top-level package under `dev.bravozulu.sitrep.<module>`. Spring Modulith enforces that modules only depend on other modules' explicitly exposed `api` sub-packages, not their `internal` packages.
 
 | Module | Responsibility | Key entities | Depends on |
 |---|---|---|---|

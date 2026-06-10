@@ -68,7 +68,7 @@ Tests use Testcontainers — Docker must be running.
 
 ## Adding a module
 
-1. Create `src/main/java/com/camelbytes/sitrep/<module>/package-info.java` annotated with `@ApplicationModule`
+1. Create `src/main/java/dev/bravozulu/sitrep/<module>/package-info.java` annotated with `@ApplicationModule`
 2. Add `api/` for the public interface other modules can depend on
 3. Add `internal/` for everything else — entities, repositories, service implementations, controllers
 

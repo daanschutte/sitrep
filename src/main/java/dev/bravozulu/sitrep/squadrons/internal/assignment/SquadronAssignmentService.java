@@ -1,0 +1,97 @@
+package dev.bravozulu.sitrep.squadrons.internal.assignment;
+
+import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
+import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
+import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
+import dev.bravozulu.sitrep.users.api.UserQueryService;
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class SquadronAssignmentService {
+  private static final Logger log = LoggerFactory.getLogger(SquadronAssignmentService.class);
+
+  private final SquadronAssignmentRepository repository;
+  private final SquadronQueryService squadronQueryService;
+  private final UserQueryService userQueryService;
+
+  public SquadronAssignmentService(
+      SquadronAssignmentRepository repository,
+      SquadronQueryService squadronQueryService,
+      UserQueryService userQueryService) {
+    this.repository = repository;
+    this.squadronQueryService = squadronQueryService;
+    this.userQueryService = userQueryService;
+  }
+
+  public List<SquadronAssignmentDto> getCurrentSquadronAssignmentsBySquadronId(UUID squadronId) {
+    return repository.findBySquadronIdAndEndedAtIsNull(squadronId).stream()
+        .map(SquadronAssignmentService::toDto)
+        .toList();
+  }
+
+  public SquadronAssignmentDto getSquadronAssignmentByUserId(UUID userId) {
+    // TODO: include cross-squadron assignment
+
+    return repository
+        .findByUserIdAndEndedAtIsNull(userId)
+        .map(SquadronAssignmentService::toDto)
+        .orElseThrow(
+            () ->
+                new SquadronAssignmentNotFoundException(
+                    "Squadron assignment for userId=" + userId.toString() + " not found"));
+  }
+
+  @Transactional
+  public void createSquadronAssignment(UUID squadronId, SquadronAssignmentCreateRequest request) {
+    squadronQueryService.validateSquadronExists(squadronId);
+    userQueryService.validateUserExists(request.userId());
+
+    SquadronAssignment assignment =
+        new SquadronAssignment(request.userId(), squadronId, request.role());
+
+    repository
+        .findByUserIdAndEndedAtIsNull(request.userId())
+        .ifPresentOrElse(
+            existing -> {
+              existing.endAssignment(Instant.now());
+              repository.saveAndFlush(existing);
+              log.debug(
+                  "Existing squadron assignment with id={} ended for user={}",
+                  existing.getId(),
+                  existing.getUserId());
+            },
+            () -> log.debug("No existing squadron assignments for userId={}", request.userId()));
+
+    try {
+      assignment = repository.save(assignment);
+      log.debug(
+          "Squadron assignment with id={} created ({}:{}) in role={}",
+          assignment.getId(),
+          assignment.getUserId(),
+          assignment.getSquadronId(),
+          assignment.getRole());
+    } catch (DataIntegrityViolationException exception) {
+      String message =
+          String.format(
+              "Could not assign userID='%s' to squadron='%s'", request.userId(), squadronId);
+      throw new ConflictException(message);
+    }
+  }
+
+  private static SquadronAssignmentDto toDto(SquadronAssignment assignment) {
+    return new SquadronAssignmentDto(
+        assignment.getId(),
+        assignment.getUserId(),
+        assignment.getSquadronId(),
+        Set.of(), // TODO: include guest squadron assignment
+        assignment.getRole());
+  }
+}

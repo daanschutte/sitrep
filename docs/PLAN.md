@@ -31,7 +31,7 @@ See the spec for full rationale. Summary:
 - **Audit**: Append-only hash-chained ledger. Insert-only via `audit_writer` role. Populated via outbox audit dispatcher. See ADR-007.
 - **Auth**: JWT access tokens (HS256, 15 min) + opaque refresh tokens (30 days, HttpOnly cookie, SHA-256 hashed). BCrypt cost 12. See ADR-005.
 - **Errors**: RFC 9457 `ProblemDetail`. `422` for Bean Validation failures. Global `@ControllerAdvice`. Add exceptions as each phase needs them.
-- **Package root**: `com.camelbytes.sitrep`
+- **Package root**: `dev.bravozulu.sitrep`
 - **No**: Lombok, H2, field injection, Spring Statemachine, Debezium or outbox libraries, JJWT, MapStruct, pgAdmin
 - **Container**: Docker multi-stage, `eclipse-temurin:21-jre`, non-root
 - **Logging**: SLF4J + Logback + `logstash-logback-encoder` (runtime scope). JSON to stdout via `logback-spring.xml`. Human-readable in `dev` and `test` profiles; `logback-test.xml` in `src/test/resources` for unit tests.
