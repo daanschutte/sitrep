@@ -9,4 +9,3 @@ public class ModulithVerificationTest {
     ApplicationModules.of(SitrepApplication.class).verify();
   }
 }
-
