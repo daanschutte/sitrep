@@ -33,7 +33,7 @@ Platforms/courses/scheduling (Phases 2–4) are deferred until Phase 1 is fully 
 
 See the spec for full rationale. Summary:
 
-- **Stack**: Java 21, Spring Boot 4.x, Maven (single module), PostgreSQL 17, Spring Modulith 2.x, Spring Data JPA + Hibernate 6, Flyway
+- **Stack**: Java 25, Spring Boot 4.x, Maven (single module), PostgreSQL 17, Spring Modulith 2.x, Spring Data JPA + Hibernate 6, Flyway
 - **Web**: Spring MVC, not WebFlux. Virtual threads (`spring.threads.virtual.enabled: true`).
 - **Security**: Spring Security 6 + `oauth2-resource-server` for JWT validation, `nimbus-jose-jwt` for signing. Stateless — no sessions.
 - **Multi-tenancy**: Postgres RLS only. No Hibernate `@Filter`. See ADR-002.
