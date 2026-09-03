@@ -45,7 +45,15 @@ public class SquadronGuestAccess extends BaseEntity {
     return role;
   }
 
+  public void setRole(SquadronRole role) {
+    this.role = role;
+  }
+
   public boolean isActive() {
     return revokedAt == null;
+  }
+
+  public void revokeAccess(Instant revokedAt) {
+    this.revokedAt = revokedAt;
   }
 }

@@ -1,12 +1,11 @@
 package dev.bravozulu.sitrep.squadrons.internal.assignment;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
-import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,18 +30,20 @@ public class SquadronAssignmentService {
     this.userQueryService = userQueryService;
   }
 
-  public List<SquadronAssignmentDto> getCurrentSquadronAssignmentsBySquadronId(UUID squadronId) {
-    return repository.findBySquadronIdAndRevokedAtIsNull(squadronId).stream()
-        .map(SquadronAssignmentService::toDto)
-        .toList();
+  public boolean isUserPrimarySquadron(UUID squadronId, UUID userId) {
+    return repository.findByUserIdAndRevokedAtIsNull(userId)
+            .map(SquadronAssignment::getSquadronId)
+            .filter(userSquadron -> userSquadron == squadronId)
+            .isPresent();
   }
 
-  public SquadronAssignmentDto getSquadronAssignmentByUserId(UUID userId) {
-    // TODO: include cross-squadron assignment
+  public List<SquadronAssignment> getSquadronAssignmentsBySquadronId(UUID squadronId) {
+    return repository.findBySquadronIdAndRevokedAtIsNull(squadronId);
+  }
 
+  public SquadronAssignment getSquadronAssignmentByUserId(UUID userId) {
     return repository
         .findByUserIdAndRevokedAtIsNull(userId)
-        .map(SquadronAssignmentService::toDto)
         .orElseThrow(
             () ->
                 new SquadronAssignmentNotFoundException(
@@ -57,6 +58,7 @@ public class SquadronAssignmentService {
     SquadronAssignment assignment =
         new SquadronAssignment(request.userId(), squadronId, request.role());
 
+    // TODO: what if new is the same as existing, should it not be untouched?
     repository
         .findByUserIdAndRevokedAtIsNull(request.userId())
         .ifPresentOrElse(
@@ -75,8 +77,8 @@ public class SquadronAssignmentService {
       log.debug(
           "Squadron assignment with id={} created ({}:{}) in role={}",
           assignment.getId(),
-          assignment.getUserId(),
-          assignment.getSquadronId(),
+              assignment.getSquadronId(),
+              assignment.getUserId(),
           assignment.getRole());
     } catch (DataIntegrityViolationException exception) {
       String message =
@@ -101,14 +103,5 @@ public class SquadronAssignmentService {
                             + " not found"));
 
     assignment.revokeAssignment(Instant.now());
-  }
-
-  private static SquadronAssignmentDto toDto(SquadronAssignment assignment) {
-    return new SquadronAssignmentDto(
-        assignment.getId(),
-        assignment.getUserId(),
-        assignment.getSquadronId(),
-        Set.of(), // TODO: include guest squadron assignment
-        assignment.getRole());
   }
 }

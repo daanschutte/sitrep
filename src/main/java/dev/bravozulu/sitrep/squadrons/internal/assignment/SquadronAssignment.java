@@ -46,8 +46,8 @@ public class SquadronAssignment extends BaseEntity {
     return role;
   }
 
-  public void revokeAssignment(Instant endedAt) {
-    this.revokedAt = endedAt;
+  public void revokeAssignment(Instant revokedAt) {
+    this.revokedAt = revokedAt;
   }
 
   public Optional<Instant> getRevokedAt() {

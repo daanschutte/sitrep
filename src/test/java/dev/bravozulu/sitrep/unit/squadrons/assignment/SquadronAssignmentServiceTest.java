@@ -69,7 +69,7 @@ class SquadronAssignmentServiceTest {
           .thenReturn(List.of(assignment1, assignment2));
 
       List<SquadronAssignmentDto> result =
-          service.getCurrentSquadronAssignmentsBySquadronId(squadronId);
+          service.getSquadronAssignmentsBySquadronId(squadronId);
 
       assertThat(result.size()).isEqualTo(2);
       assertThat(result.get(0).userId()).isEqualTo(userId1);
@@ -82,7 +82,7 @@ class SquadronAssignmentServiceTest {
       when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of());
 
       List<SquadronAssignmentDto> result =
-          service.getCurrentSquadronAssignmentsBySquadronId(squadronId);
+          service.getSquadronAssignmentsBySquadronId(squadronId);
 
       assertThat(result.isEmpty()).isTrue();
     }
