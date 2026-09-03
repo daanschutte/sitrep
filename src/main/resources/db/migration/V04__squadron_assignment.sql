@@ -13,7 +13,7 @@ CREATE TABLE squadron_assignment
 CREATE UNIQUE INDEX idx_user_current_squadron_assignment
     ON squadron_assignment (user_id) WHERE revoked_at IS NULL;
 
-CREATE TABLE squadron_guest_access
+CREATE TABLE squadron_guest_assignment
 (
     id          UUID PRIMARY KEY,
     user_id     UUID        NOT NULL REFERENCES users (id),

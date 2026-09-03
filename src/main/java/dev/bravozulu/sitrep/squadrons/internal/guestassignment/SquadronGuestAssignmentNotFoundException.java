@@ -1,4 +1,4 @@
-package dev.bravozulu.sitrep.squadrons.internal.guestaccess;
+package dev.bravozulu.sitrep.squadrons.internal.guestassignment;
 
 import dev.bravozulu.sitrep.shared.exceptions.NotFoundException;
 

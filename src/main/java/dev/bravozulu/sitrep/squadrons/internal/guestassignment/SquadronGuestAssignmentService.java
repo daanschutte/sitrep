@@ -1,4 +1,4 @@
-package dev.bravozulu.sitrep.squadrons.internal.guestaccess;
+package dev.bravozulu.sitrep.squadrons.internal.guestassignment;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
 import dev.bravozulu.sitrep.squadrons.api.SquadronGuestAssignmentDto;
@@ -16,16 +16,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class SquadronGuestAccessService {
-  private static final Logger log = LoggerFactory.getLogger(SquadronGuestAccessService.class);
+public class SquadronGuestAssignmentService {
+  private static final Logger log = LoggerFactory.getLogger(SquadronGuestAssignmentService.class);
 
   private final SquadronAssignmentService squadronAssignmentService;
-  private final SquadronGuestAccessRepository repository;
+  private final SquadronGuestAssignmentRepository repository;
   private final SquadronQueryService squadronQueryService;
   private final UserQueryService userQueryService;
 
-  public SquadronGuestAccessService(
-      SquadronGuestAccessRepository repository,
+  public SquadronGuestAssignmentService(
+      SquadronGuestAssignmentRepository repository,
       SquadronAssignmentService squadronAssignmentService,
       SquadronQueryService squadronQueryService,
       UserQueryService userQueryService) {
@@ -35,16 +35,16 @@ public class SquadronGuestAccessService {
     this.userQueryService = userQueryService;
   }
 
-  public Optional<SquadronGuestAccess> findSquadronGuestAccess(UUID squadronId, UUID userId) {
+  public Optional<SquadronGuestAssignment> findSquadronGuestAssignment(UUID squadronId, UUID userId) {
     return repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId);
   }
 
-  public List<SquadronGuestAssignmentDto> getSquadronGuestAccess(UUID userId) {
+  public List<SquadronGuestAssignmentDto> getSquadronGuestAssignment(UUID userId) {
     return repository.findAllByUserIdAndRevokedAtIsNull(userId).stream().map(this::toDto).toList();
   }
 
   @Transactional
-  public void createSquadronGuestAccess(UUID squadronId, SquadronGuestAccessCreateRequest request) {
+  public void createSquadronGuestAssignment(UUID squadronId, SquadronGuestAssignmentCreateRequest request) {
     squadronQueryService.validateSquadronExists(squadronId);
     userQueryService.validateUserExists(request.userId());
 
@@ -56,7 +56,7 @@ public class SquadronGuestAccessService {
       return;
     }
 
-    findSquadronGuestAccess(squadronId, request.userId())
+    findSquadronGuestAssignment(squadronId, request.userId())
         .ifPresentOrElse(
             existing -> {
               if (existing.getRole() != request.role()) {
@@ -71,8 +71,8 @@ public class SquadronGuestAccessService {
               }
             },
             () -> {
-              SquadronGuestAccess access =
-                  new SquadronGuestAccess(squadronId, request.userId(), request.role());
+              SquadronGuestAssignment access =
+                  new SquadronGuestAssignment(squadronId, request.userId(), request.role());
               try {
                 access = repository.save(access);
                 log.debug(
@@ -92,8 +92,8 @@ public class SquadronGuestAccessService {
   }
 
   @Transactional
-  public void revokeSquadronGuestAccess(UUID squadronId, UUID userId) {
-    SquadronGuestAccess guestAccess =
+  public void revokeSquadronGuestAssignment(UUID squadronId, UUID userId) {
+    SquadronGuestAssignment guestAssignment =
         repository
             .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId)
             .orElseThrow(
@@ -105,10 +105,10 @@ public class SquadronGuestAccessService {
                             + userId.toString()
                             + " not found"));
 
-    guestAccess.revokeAccess(Instant.now());
+    guestAssignment.revokeAccess(Instant.now());
   }
 
-  private SquadronGuestAssignmentDto toDto(SquadronGuestAccess guestAssignment) {
+  private SquadronGuestAssignmentDto toDto(SquadronGuestAssignment guestAssignment) {
     return new SquadronGuestAssignmentDto(
         guestAssignment.getId(), guestAssignment.getSquadronId(), guestAssignment.getRole());
   }

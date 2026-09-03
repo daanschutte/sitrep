@@ -16,10 +16,10 @@ All implementation code is written by the developer. Claude's role is design rev
 
 ## Where We Are (September 2026)
 
-Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module in progress (`Squadron`, `SquadronAssignment`, `SquadronGuestAccess` entities, CRUD + enable/disable + assignment endpoints, migrations V01–V04, `SquadronQueryService` and `UserQueryService` cross-module interfaces wired). `SquadronGuestAccess` still needs its repository/service/controller.
+Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module in progress (`Squadron`, `SquadronAssignment`, `SquadronGuestAssignment` entities, CRUD + enable/disable + assignment endpoints, migrations V01–V04, `SquadronQueryService` and `UserQueryService` cross-module interfaces wired). `SquadronGuestAssignment` still needs its repository/service/controller.
 
 **Current priority order** (chosen for hiring-signal impact — these are the most differentiated pieces of the system, not generic CRUD):
-1. Finish `SquadronGuestAccess` (close out `squadrons`)
+1. Finish `SquadronGuestAssignment` (close out `squadrons`)
 2. `auth` — JWT + refresh token flow
 3. `outbox` — hand-rolled dispatch loops
 4. `audit` — hash-chained ledger
