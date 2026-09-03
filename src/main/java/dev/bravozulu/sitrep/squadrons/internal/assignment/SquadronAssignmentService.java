@@ -32,7 +32,7 @@ public class SquadronAssignmentService {
   }
 
   public List<SquadronAssignmentDto> getCurrentSquadronAssignmentsBySquadronId(UUID squadronId) {
-    return repository.findBySquadronIdAndEndedAtIsNull(squadronId).stream()
+    return repository.findBySquadronIdAndRevokedAtIsNull(squadronId).stream()
         .map(SquadronAssignmentService::toDto)
         .toList();
   }
@@ -41,7 +41,7 @@ public class SquadronAssignmentService {
     // TODO: include cross-squadron assignment
 
     return repository
-        .findByUserIdAndEndedAtIsNull(userId)
+        .findByUserIdAndRevokedAtIsNull(userId)
         .map(SquadronAssignmentService::toDto)
         .orElseThrow(
             () ->
@@ -58,10 +58,10 @@ public class SquadronAssignmentService {
         new SquadronAssignment(request.userId(), squadronId, request.role());
 
     repository
-        .findByUserIdAndEndedAtIsNull(request.userId())
+        .findByUserIdAndRevokedAtIsNull(request.userId())
         .ifPresentOrElse(
             existing -> {
-              existing.endAssignment(Instant.now());
+              existing.revokeAssignment(Instant.now());
               repository.saveAndFlush(existing);
               log.debug(
                   "Existing squadron assignment with id={} ended for user={}",
@@ -84,6 +84,23 @@ public class SquadronAssignmentService {
               "Could not assign userID='%s' to squadron='%s'", request.userId(), squadronId);
       throw new ConflictException(message);
     }
+  }
+
+  @Transactional
+  public void revokeSquadronAssignment(UUID squadronId, UUID userId) {
+    SquadronAssignment assignment =
+        repository
+            .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId)
+            .orElseThrow(
+                () ->
+                    new SquadronAssignmentNotFoundException(
+                        "Squadron assignment for squadronId="
+                            + squadronId.toString()
+                            + " userId="
+                            + userId.toString()
+                            + " not found"));
+
+    assignment.revokeAssignment(Instant.now());
   }
 
   private static SquadronAssignmentDto toDto(SquadronAssignment assignment) {

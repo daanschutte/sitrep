@@ -155,11 +155,11 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
       // Verify state: old assignment should be ended
       SquadronAssignment updatedExisting =
           assignmentRepository.findById(existing.getId()).orElseThrow();
-      assertThat(updatedExisting.getEndedAt()).isPresent();
+      assertThat(updatedExisting.getRevokedAt()).isPresent();
 
       // Verify state: new assignment should be current
       List<SquadronAssignment> currentAssignments =
-          assignmentRepository.findByUserIdAndEndedAtIsNull(userId).stream().toList();
+          assignmentRepository.findByUserIdAndRevokedAtIsNull(userId).stream().toList();
       assertThat(currentAssignments.size()).isEqualTo(1);
       assertThat(currentAssignments.getFirst().getSquadronId()).isEqualTo(newSquadronId);
     }

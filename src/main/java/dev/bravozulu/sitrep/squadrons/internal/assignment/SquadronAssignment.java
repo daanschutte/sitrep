@@ -24,7 +24,7 @@ public class SquadronAssignment extends BaseEntity {
   @Enumerated(EnumType.STRING)
   private SquadronRole role;
 
-  private Instant endedAt;
+  private Instant revokedAt;
 
   protected SquadronAssignment() {}
 
@@ -46,11 +46,11 @@ public class SquadronAssignment extends BaseEntity {
     return role;
   }
 
-  public void endAssignment(Instant endedAt) {
-    this.endedAt = endedAt;
+  public void revokeAssignment(Instant endedAt) {
+    this.revokedAt = endedAt;
   }
 
-  public Optional<Instant> getEndedAt() {
-    return Optional.ofNullable(endedAt);
+  public Optional<Instant> getRevokedAt() {
+    return Optional.ofNullable(revokedAt);
   }
 }
