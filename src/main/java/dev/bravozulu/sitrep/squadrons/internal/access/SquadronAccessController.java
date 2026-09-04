@@ -1,7 +1,6 @@
 package dev.bravozulu.sitrep.squadrons.internal.access;
 
 import dev.bravozulu.sitrep.squadrons.api.SquadronAccessDto;
-import dev.bravozulu.sitrep.squadrons.api.SquadronAccessService;
 import dev.bravozulu.sitrep.squadrons.api.UserSquadronAccessDto;
 import java.util.List;
 import java.util.UUID;
@@ -16,19 +15,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/squadrons")
 @Validated
 public class SquadronAccessController {
-  private final SquadronAccessService service;
+  private final SquadronAccessCoordinator coordinator;
 
-  public SquadronAccessController(SquadronAccessService service) {
-    this.service = service;
+  public SquadronAccessController(SquadronAccessCoordinator coordinator) {
+    this.coordinator = coordinator;
   }
 
-  @GetMapping("/assignments")
+  @GetMapping("/access")
   public UserSquadronAccessDto getByUserId(@RequestParam UUID userId) {
-    return service.getSquadronAccessByUserId(userId);
+    return coordinator.getSquadronAccessByUserId(userId);
   }
 
-  @GetMapping("/{squadronId}/assignments")
+  @GetMapping("/{squadronId}/access")
   public List<SquadronAccessDto> getBySquadronId(@PathVariable UUID squadronId) {
-    return service.getSquadronAccessBySquadronId(squadronId);
+    return coordinator.getSquadronAccessBySquadronId(squadronId);
   }
 }

@@ -1,4 +1,4 @@
-package dev.bravozulu.sitrep.integration.squadrons.assignment;
+package dev.bravozulu.sitrep.integration.squadrons.access;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;

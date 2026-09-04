@@ -1,6 +1,7 @@
-package dev.bravozulu.sitrep.squadrons.internal.assignment;
+package dev.bravozulu.sitrep.squadrons.internal.access;
 
-import dev.bravozulu.sitrep.squadrons.internal.access.SquadronAccessCoordinator;
+import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest;
+import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentRoleChangeRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;

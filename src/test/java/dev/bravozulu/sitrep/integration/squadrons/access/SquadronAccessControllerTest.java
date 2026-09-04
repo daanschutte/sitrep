@@ -57,7 +57,7 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
           new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR));
 
       mockMvc
-          .perform(get("/api/v1/squadrons/assignments").param("userId", userId.toString()))
+          .perform(get("/api/v1/squadrons/access").param("userId", userId.toString()))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.userId").value(userId.toString()))
           .andExpect(jsonPath("$.primarySquadronId").value(squadronId.toString()))
@@ -75,7 +75,7 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
           new SquadronGuestAssignment(guestSquadronId, userId, SquadronRole.OPS));
 
       mockMvc
-          .perform(get("/api/v1/squadrons/assignments").param("userId", userId.toString()))
+          .perform(get("/api/v1/squadrons/access").param("userId", userId.toString()))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.guestAssignments[0].squadronId").value(guestSquadronId.toString()))
           .andExpect(jsonPath("$.guestAssignments[0].role").value("OPS"));
@@ -94,7 +94,7 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
           new SquadronGuestAssignment(guestSquadronId2, userId, SquadronRole.STUDENT));
 
       mockMvc
-          .perform(get("/api/v1/squadrons/assignments").param("userId", userId.toString()))
+          .perform(get("/api/v1/squadrons/access").param("userId", userId.toString()))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.guestAssignments.length()").value(2))
           .andExpect(
@@ -107,20 +107,19 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
     @Test
     void getByUserId_noPrimaryAssignment_returnsNotFound() throws Exception {
       mockMvc
-          .perform(
-              get("/api/v1/squadrons/assignments").param("userId", UUID.randomUUID().toString()))
+          .perform(get("/api/v1/squadrons/access").param("userId", UUID.randomUUID().toString()))
           .andExpect(status().isNotFound());
     }
 
     @Test
     void getByUserId_missingParam_returnsBadRequest() throws Exception {
-      mockMvc.perform(get("/api/v1/squadrons/assignments")).andExpect(status().isBadRequest());
+      mockMvc.perform(get("/api/v1/squadrons/access")).andExpect(status().isBadRequest());
     }
 
     @Test
     void getByUserId_malformedUuid_returnsBadRequest() throws Exception {
       mockMvc
-          .perform(get("/api/v1/squadrons/assignments").param("userId", "not-a-uuid"))
+          .perform(get("/api/v1/squadrons/access").param("userId", "not-a-uuid"))
           .andExpect(status().isBadRequest());
     }
   }
@@ -133,7 +132,7 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
           new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR));
 
       mockMvc
-          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
+          .perform(get("/api/v1/squadrons/{squadronId}/access", squadronId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$[0].userId").value(userId.toString()))
           .andExpect(jsonPath("$[0].squadronId").value(squadronId.toString()))
@@ -148,7 +147,7 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
           new SquadronGuestAssignment(squadronId, guestUserId, SquadronRole.OPS));
 
       mockMvc
-          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
+          .perform(get("/api/v1/squadrons/{squadronId}/access", squadronId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$[0].userId").value(guestUserId.toString()))
           .andExpect(jsonPath("$[0].squadronId").value(squadronId.toString()))
@@ -167,7 +166,7 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
           new SquadronGuestAssignment(squadronId, guestUserId, SquadronRole.OPS));
 
       mockMvc
-          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
+          .perform(get("/api/v1/squadrons/{squadronId}/access", squadronId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.length()").value(2))
           .andExpect(
@@ -181,7 +180,7 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
     @Test
     void getBySquadronId_noMembers_returnsEmptyList() throws Exception {
       mockMvc
-          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
+          .perform(get("/api/v1/squadrons/{squadronId}/access", squadronId))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$").isEmpty());
     }

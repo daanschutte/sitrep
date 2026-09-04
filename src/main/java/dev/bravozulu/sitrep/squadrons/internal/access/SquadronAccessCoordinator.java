@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SquadronAccessCoordinator implements SquadronAccessService {
-
   private final SquadronAssignmentService squadronAssignmentService;
   private final SquadronGuestAssignmentService squadronGuestAssignmentService;
 
