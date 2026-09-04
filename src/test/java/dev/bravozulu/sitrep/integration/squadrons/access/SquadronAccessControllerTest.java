@@ -1,5 +1,7 @@
 package dev.bravozulu.sitrep.integration.squadrons.access;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -81,6 +83,29 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
     }
 
     @Test
+    void getByUserId_withMultipleGuestSquadrons_includesAll() throws Exception {
+      assignmentRepository.save(
+          new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR));
+
+      UUID guestSquadronId1 = squadronRepository.save(new Squadron("2 Squadron", "2SQN")).getId();
+      UUID guestSquadronId2 = squadronRepository.save(new Squadron("3 Squadron", "3SQN")).getId();
+      guestAssignmentRepository.save(
+          new SquadronGuestAssignment(guestSquadronId1, userId, SquadronRole.OPS));
+      guestAssignmentRepository.save(
+          new SquadronGuestAssignment(guestSquadronId2, userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(get("/api/v1/squadrons/assignments").param("userId", userId.toString()))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.guestAssignmentDtos.length()").value(2))
+          .andExpect(
+              jsonPath("$.guestAssignmentDtos[*].squadronId")
+                  .value(
+                      containsInAnyOrder(
+                          guestSquadronId1.toString(), guestSquadronId2.toString())));
+    }
+
+    @Test
     void getByUserId_noPrimaryAssignment_returnsNotFound() throws Exception {
       mockMvc
           .perform(
@@ -129,6 +154,29 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
           .andExpect(jsonPath("$[0].userId").value(guestUserId.toString()))
           .andExpect(jsonPath("$[0].squadronId").value(squadronId.toString()))
           .andExpect(jsonPath("$[0].role").value("OPS"));
+    }
+
+    @Test
+    void getBySquadronId_includesPrimaryAndGuestMembers_returnsBothWithoutDuplication()
+        throws Exception {
+      assignmentRepository.save(
+          new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR));
+
+      UUID guestUserId =
+          userRepository.save(new User("Amelia", "Earhart", "amelia@ae.com", "Capt")).getId();
+      guestAssignmentRepository.save(
+          new SquadronGuestAssignment(squadronId, guestUserId, SquadronRole.OPS));
+
+      mockMvc
+          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.length()").value(2))
+          .andExpect(
+              jsonPath("$[*].userId")
+                  .value(containsInAnyOrder(userId.toString(), guestUserId.toString())))
+          .andExpect(jsonPath("$[?(@.userId == '" + userId + "')].isGuest").value(hasItem(false)))
+          .andExpect(
+              jsonPath("$[?(@.userId == '" + guestUserId + "')].isGuest").value(hasItem(true)));
     }
 
     @Test

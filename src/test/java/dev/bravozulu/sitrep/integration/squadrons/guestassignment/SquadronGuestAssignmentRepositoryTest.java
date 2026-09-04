@@ -1,5 +1,6 @@
 package dev.bravozulu.sitrep.integration.squadrons.guestassignment;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import dev.bravozulu.sitrep.AbstractIntegrationTests;
@@ -51,6 +52,17 @@ public class SquadronGuestAssignmentRepositoryTest extends AbstractIntegrationTe
                 repository.saveAndFlush(
                     new SquadronGuestAssignment(squadronId, userId, SquadronRole.STUDENT)))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void save_sameUserDifferentSquadrons_bothPersist() {
+    UUID otherSquadronId = squadronRepository.save(new Squadron("2 Squadron", "2SQN")).getId();
+
+    repository.saveAndFlush(new SquadronGuestAssignment(squadronId, userId, SquadronRole.OPS));
+    repository.saveAndFlush(
+        new SquadronGuestAssignment(otherSquadronId, userId, SquadronRole.STUDENT));
+
+    assertThat(repository.findAllByUserIdAndRevokedAtIsNull(userId)).hasSize(2);
   }
 
   @AfterEach

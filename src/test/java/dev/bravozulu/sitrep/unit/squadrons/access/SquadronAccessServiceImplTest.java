@@ -64,7 +64,7 @@ class SquadronAccessServiceImplTest {
       UUID userId = UUID.randomUUID();
       UUID primarySquadronId = UUID.randomUUID();
       SquadronAssignmentDto primary =
-          new SquadronAssignmentDto(userId, primarySquadronId, SquadronRole.STUDENT);
+          new SquadronAssignmentDto(primarySquadronId, userId, SquadronRole.STUDENT);
 
       when(squadronAssignmentService.getSquadronAssignmentByUserId(userId)).thenReturn(primary);
       when(squadronGuestAssignmentService.getSquadronGuestAssignmentsByUserId(userId))
