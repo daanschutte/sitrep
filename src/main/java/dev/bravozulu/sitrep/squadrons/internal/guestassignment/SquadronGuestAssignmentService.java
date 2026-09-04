@@ -35,7 +35,8 @@ public class SquadronGuestAssignmentService {
     this.userQueryService = userQueryService;
   }
 
-  public Optional<SquadronGuestAssignment> findSquadronGuestAssignment(UUID squadronId, UUID userId) {
+  public Optional<SquadronGuestAssignment> findSquadronGuestAssignment(
+      UUID squadronId, UUID userId) {
     return repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId);
   }
 
@@ -44,7 +45,8 @@ public class SquadronGuestAssignmentService {
   }
 
   @Transactional
-  public void createSquadronGuestAssignment(UUID squadronId, SquadronGuestAssignmentCreateRequest request) {
+  public void createSquadronGuestAssignment(
+      UUID squadronId, SquadronGuestAssignmentCreateRequest request) {
     squadronQueryService.validateSquadronExists(squadronId);
     userQueryService.validateUserExists(request.userId());
 
@@ -53,7 +55,12 @@ public class SquadronGuestAssignmentService {
           "Could not assign guest access: squadronId={} already primary squadron of userId={}",
           squadronId,
           request.userId().toString());
-      return;
+
+      throw new SquadronGuestAssignmentConflictException(
+          "Cannot assign userId="
+              + request.userId().toString()
+              + " as guest in their primary squadronId="
+              + squadronId.toString());
     }
 
     findSquadronGuestAssignment(squadronId, request.userId())
