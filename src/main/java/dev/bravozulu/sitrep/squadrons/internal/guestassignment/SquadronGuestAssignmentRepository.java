@@ -1,12 +1,12 @@
 package dev.bravozulu.sitrep.squadrons.internal.guestassignment;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface SquadronGuestAssignmentRepository extends JpaRepository<SquadronGuestAssignment, UUID> {
+public interface SquadronGuestAssignmentRepository
+    extends JpaRepository<SquadronGuestAssignment, UUID> {
   Optional<SquadronGuestAssignment> findBySquadronIdAndUserIdAndRevokedAtIsNull(
       UUID squadronId, UUID userId);
 

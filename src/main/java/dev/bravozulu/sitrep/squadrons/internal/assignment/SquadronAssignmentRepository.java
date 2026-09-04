@@ -10,5 +10,6 @@ public interface SquadronAssignmentRepository extends JpaRepository<SquadronAssi
 
   List<SquadronAssignment> findBySquadronIdAndRevokedAtIsNull(UUID squadronId);
 
-  Optional<SquadronAssignment> findBySquadronIdAndUserIdAndRevokedAtIsNull(UUID squadronId, UUID userId);
+  Optional<SquadronAssignment> findBySquadronIdAndUserIdAndRevokedAtIsNull(
+      UUID squadronId, UUID userId);
 }

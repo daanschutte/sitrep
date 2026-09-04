@@ -30,10 +30,11 @@ public class SquadronAssignmentService {
   }
 
   public boolean isUserPrimarySquadron(UUID squadronId, UUID userId) {
-    return repository.findByUserIdAndRevokedAtIsNull(userId)
-            .map(SquadronAssignment::getSquadronId)
-            .filter(userSquadron -> userSquadron.equals(squadronId))
-            .isPresent();
+    return repository
+        .findByUserIdAndRevokedAtIsNull(userId)
+        .map(SquadronAssignment::getSquadronId)
+        .filter(userSquadron -> userSquadron.equals(squadronId))
+        .isPresent();
   }
 
   public List<SquadronAssignment> getSquadronAssignmentsBySquadronId(UUID squadronId) {
@@ -76,8 +77,8 @@ public class SquadronAssignmentService {
       log.debug(
           "Squadron assignment with id={} created ({}:{}) in role={}",
           assignment.getId(),
-              assignment.getSquadronId(),
-              assignment.getUserId(),
+          assignment.getSquadronId(),
+          assignment.getUserId(),
           assignment.getRole());
     } catch (DataIntegrityViolationException exception) {
       String message =
