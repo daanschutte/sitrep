@@ -27,7 +27,9 @@ public class SquadronGuestAssignmentController {
       @PathVariable UUID squadronId,
       @RequestBody @Valid SquadronGuestAssignmentCreateRequest request) {
     service.assignGuestSquadron(squadronId, request);
-    return ResponseEntity.created(URI.create("/api/v1/squadrons/" + squadronId + "/guest-assignments")).build();
+    return ResponseEntity.created(
+            URI.create("/api/v1/squadrons/" + squadronId + "/guest-assignments"))
+        .build();
   }
 
   @PutMapping("/{squadronId}/guest-assignments/{userId}/role")
