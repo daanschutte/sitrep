@@ -26,7 +26,7 @@ This is genuinely new territory, not a refresh — collaborate more actively tha
 
 ## Standards
 
-- Java 21 — use modern features where appropriate (records, sealed classes, pattern matching, etc)
+- Java 25 — use modern features where appropriate (records, sealed classes, pattern matching, etc)
 - Spring Boot 4 — follow current conventions, not legacy patterns
 - Prefer clarity over cleverness
 - No comments unless the why is non-obvious
