@@ -59,37 +59,45 @@ public class SquadronAssignmentService {
     squadronQueryService.validateSquadronExists(squadronId);
     userQueryService.validateUserExists(request.userId());
 
-    SquadronAssignment assignment =
-        new SquadronAssignment(squadronId, request.userId(), request.role());
-
-    // TODO: what if new is the same as existing, should it not be untouched?
     repository
         .findByUserIdAndRevokedAtIsNull(request.userId())
         .ifPresentOrElse(
             existing -> {
-              existing.revokeAssignment(Instant.now());
-              repository.saveAndFlush(existing);
-              log.debug(
-                  "Existing squadron assignment with id={} ended for user={}",
-                  existing.getId(),
-                  existing.getUserId());
+              if (existing.getSquadronId().equals(squadronId)) {
+                if (existing.getRole().equals(request.role())) {
+                  log.error(
+                      "userId={} already holds role={} at squadronId={}",
+                      request.userId(),
+                      request.role(),
+                      squadronId);
+                } else {
+                  existing.setRole(request.role());
+                  repository.saveAndFlush(existing);
+                }
+              }
             },
-            () -> log.debug("No existing squadron assignments for userId={}", request.userId()));
+            () -> {
+              log.debug("No existing squadron assignments for userId={}", request.userId());
 
-    try {
-      assignment = repository.save(assignment);
-      log.debug(
-          "Squadron assignment with id={} created ({}:{}) in role={}",
-          assignment.getId(),
-          assignment.getSquadronId(),
-          assignment.getUserId(),
-          assignment.getRole());
-    } catch (DataIntegrityViolationException exception) {
-      String message =
-          String.format(
-              "Could not assign userID='%s' to squadron='%s'", request.userId(), squadronId);
-      throw new ConflictException(message);
-    }
+              SquadronAssignment assignment =
+                  new SquadronAssignment(squadronId, request.userId(), request.role());
+
+              try {
+                assignment = repository.save(assignment);
+                log.debug(
+                    "Squadron assignment with id={} created ({}:{}) in role={}",
+                    assignment.getId(),
+                    assignment.getSquadronId(),
+                    assignment.getUserId(),
+                    assignment.getRole());
+              } catch (DataIntegrityViolationException exception) {
+                String message =
+                    String.format(
+                        "Could not assign userID='%s' to squadron='%s'",
+                        request.userId(), squadronId);
+                throw new ConflictException(message);
+              }
+            });
   }
 
   @Transactional
