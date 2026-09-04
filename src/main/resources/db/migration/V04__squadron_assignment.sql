@@ -26,4 +26,4 @@ CREATE TABLE squadron_guest_assignment
 );
 
 CREATE UNIQUE INDEX idx_user_current_squadron_guest_assignment
-    ON squadron_guest_assignment (user_id) WHERE revoked_at IS NULL;
+    ON squadron_guest_assignment (user_id, squadron_id) WHERE revoked_at IS NULL;
