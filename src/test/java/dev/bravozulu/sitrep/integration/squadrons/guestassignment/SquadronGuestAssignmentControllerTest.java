@@ -284,6 +284,28 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
                   UUID.randomUUID()))
           .andExpect(status().isNotFound());
     }
+
+    @Test
+    void revokeSquadronGuestAssignment_alreadyRevoked_returnsNotFound() throws Exception {
+      guestAssignmentRepository.save(
+          new SquadronGuestAssignment(squadronId, userId, SquadronRole.OPS));
+
+      mockMvc
+          .perform(
+              put(
+                  "/api/v1/squadrons/{squadronId}/guest-assignments/{userId}/revoke",
+                  squadronId,
+                  userId))
+          .andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(
+              put(
+                  "/api/v1/squadrons/{squadronId}/guest-assignments/{userId}/revoke",
+                  squadronId,
+                  userId))
+          .andExpect(status().isNotFound());
+    }
   }
 
   @AfterEach

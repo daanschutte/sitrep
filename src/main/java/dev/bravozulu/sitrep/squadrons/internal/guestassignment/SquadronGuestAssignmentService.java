@@ -44,6 +44,10 @@ public class SquadronGuestAssignmentService {
     return repository.findAllBySquadronIdAndRevokedAtIsNull(squadronId);
   }
 
+  public boolean hasActiveGuestAssignment(UUID squadronId, UUID userId) {
+    return repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId).isPresent();
+  }
+
   @Transactional
   public void assignGuestSquadron(UUID squadronId, SquadronGuestAssignmentCreateRequest request) {
     squadronQueryService.validateSquadronExists(squadronId);
@@ -100,13 +104,13 @@ public class SquadronGuestAssignmentService {
             .orElseThrow(
                 () ->
                     new NotFoundException(
-                        "Squadron assignment for squadronId="
+                        "Squadron guest assignment for squadronId="
                             + squadronId.toString()
                             + " userId="
                             + userId.toString()
                             + " not found"));
 
-    guestAssignment.revokeGuestAssignment(Instant.now());
+    guestAssignment.revoke(Instant.now());
     repository.saveAndFlush(guestAssignment);
   }
 
@@ -114,7 +118,7 @@ public class SquadronGuestAssignmentService {
     SquadronGuestAssignment access =
         new SquadronGuestAssignment(squadronId, request.userId(), request.role());
     try {
-      access = repository.save(access);
+      access = repository.saveAndFlush(access);
       log.debug(
           "Squadron guest access with id={} created ({}:{}) in role={}",
           access.getId(),

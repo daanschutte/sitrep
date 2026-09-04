@@ -1,5 +1,6 @@
 package dev.bravozulu.sitrep.squadrons.internal.assignment;
 
+import dev.bravozulu.sitrep.squadrons.internal.access.SquadronAccessCoordinator;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
@@ -16,16 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/squadrons")
 @Validated
 public class SquadronAssignmentController {
-  private final SquadronAssignmentService service;
+  private final SquadronAccessCoordinator coordinator;
 
-  public SquadronAssignmentController(SquadronAssignmentService service) {
-    this.service = service;
+  public SquadronAssignmentController(SquadronAccessCoordinator coordinator) {
+    this.coordinator = coordinator;
   }
 
   @PostMapping("/{squadronId}/assignments")
   public ResponseEntity<Void> assignSquadron(
       @PathVariable UUID squadronId, @RequestBody @Valid SquadronAssignmentCreateRequest request) {
-    service.assignSquadron(squadronId, request);
+    coordinator.assignSquadron(squadronId, request.userId(), request.role());
     return ResponseEntity.created(URI.create("/api/v1/squadrons/" + squadronId + "/assignments"))
         .build();
   }
@@ -33,14 +34,14 @@ public class SquadronAssignmentController {
   @PutMapping("/{squadronId}/assignments/transfer")
   public ResponseEntity<Void> transferSquadron(
       @PathVariable UUID squadronId, @RequestBody @Valid SquadronAssignmentCreateRequest request) {
-    service.transferSquadronAssignment(squadronId, request);
+    coordinator.transferSquadronAssignment(squadronId, request.userId(), request.role());
     return ResponseEntity.noContent().build();
   }
 
   @PutMapping("/{squadronId}/assignments/{userId}/revoke")
   public ResponseEntity<Void> revokeSquadronAssignment(
       @PathVariable UUID squadronId, @PathVariable UUID userId) {
-    service.revokeSquadronAssignment(squadronId, userId);
+    coordinator.revokeSquadronAssignment(squadronId, userId);
     return ResponseEntity.noContent().build();
   }
 
@@ -49,7 +50,7 @@ public class SquadronAssignmentController {
       @PathVariable UUID squadronId,
       @PathVariable UUID userId,
       @RequestBody @Valid SquadronAssignmentRoleChangeRequest request) {
-    service.changeSquadronRole(squadronId, userId, request.role());
+    coordinator.changeSquadronRole(squadronId, userId, request.role());
     return ResponseEntity.noContent().build();
   }
 }

@@ -49,7 +49,7 @@ public class SquadronAssignment extends BaseEntity {
     this.role = role;
   }
 
-  public void revokeAssignment(Instant revokedAt) {
+  public void revoke(Instant revokedAt) {
     this.revokedAt = revokedAt;
   }
 

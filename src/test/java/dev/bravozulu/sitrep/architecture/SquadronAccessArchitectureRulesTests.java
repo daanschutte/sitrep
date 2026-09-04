@@ -23,13 +23,4 @@ public class SquadronAccessArchitectureRulesTests {
           .should()
           .dependOnClassesThat()
           .resideInAPackage("..squadrons.internal.guestassignment..");
-
-  @ArchTest
-  static final ArchRule onlyAccessPackage_shouldDependOn_squadronAccessServiceImpl =
-      noClasses()
-          .that()
-          .resideOutsideOfPackage("..squadrons.internal.access..")
-          .should()
-          .dependOnClassesThat()
-          .haveSimpleName("SquadronAccessServiceImpl");
 }

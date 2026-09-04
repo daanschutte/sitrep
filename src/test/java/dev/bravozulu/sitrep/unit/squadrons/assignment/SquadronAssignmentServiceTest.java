@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,7 +24,6 @@ import dev.bravozulu.sitrep.users.api.UserQueryService;
 import dev.bravozulu.sitrep.users.internal.UserNotFoundException;
 import dev.bravozulu.sitrep.users.internal.UserRepository;
 import dev.bravozulu.sitrep.users.internal.UserService;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,7 +34,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class SquadronAssignmentServiceTest {
@@ -92,24 +91,13 @@ class SquadronAssignmentServiceTest {
     @Test
     void getBySquadronId_returnsAssignments() {
       UUID squadronId = UUID.randomUUID();
-      SquadronAssignment assignment1 =
-          new SquadronAssignment(squadronId, UUID.randomUUID(), SquadronRole.INSTRUCTOR);
-      ReflectionTestUtils.setField(assignment1, "id", UUID.randomUUID());
-      SquadronAssignment assignment2 =
-          new SquadronAssignment(squadronId, UUID.randomUUID(), SquadronRole.STUDENT);
-
-      ReflectionTestUtils.setField(assignment2, "id", UUID.randomUUID());
-      when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId))
-          .thenReturn(List.of(assignment1, assignment2));
-
       SquadronAssignmentDto assignment1Dto =
-          new SquadronAssignmentDto(
-              assignment1.getSquadronId(), assignment1.getUserId(), assignment1.getRole());
-      ReflectionTestUtils.setField(assignment1, "id", UUID.randomUUID());
+          new SquadronAssignmentDto(squadronId, UUID.randomUUID(), SquadronRole.INSTRUCTOR);
       SquadronAssignmentDto assignment2Dto =
-          new SquadronAssignmentDto(
-              assignment2.getSquadronId(), assignment2.getUserId(), assignment2.getRole());
-      ReflectionTestUtils.setField(assignment2, "id", UUID.randomUUID());
+          new SquadronAssignmentDto(squadronId, UUID.randomUUID(), SquadronRole.STUDENT);
+
+      when(repository.findAllBySquadronIdAndRevokedAtIsNull(squadronId))
+          .thenReturn(List.of(assignment1Dto, assignment2Dto));
 
       List<SquadronAssignmentDto> result = service.getSquadronAssignmentsBySquadronId(squadronId);
 
@@ -119,7 +107,7 @@ class SquadronAssignmentServiceTest {
     @Test
     void getBySquadronId_noneFound_returnsEmptyList() {
       UUID squadronId = UUID.randomUUID();
-      when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of());
+      when(repository.findAllBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of());
 
       assertThat(service.getSquadronAssignmentsBySquadronId(squadronId)).isEmpty();
     }
@@ -164,11 +152,11 @@ class SquadronAssignmentServiceTest {
       when(userRepository.existsById(request.userId())).thenReturn(true);
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(Optional.empty());
-      when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+      when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
       service.assignSquadron(squadronId, request);
 
-      verify(repository).save(any(SquadronAssignment.class));
+      verify(repository).saveAndFlush(any(SquadronAssignment.class));
     }
 
     @Test
@@ -186,7 +174,7 @@ class SquadronAssignmentServiceTest {
 
       assertThatThrownBy(() -> service.assignSquadron(squadronId, request))
           .isInstanceOf(ConflictException.class);
-      verify(repository, never()).save(any());
+      verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -225,7 +213,7 @@ class SquadronAssignmentServiceTest {
       when(userRepository.existsById(request.userId())).thenReturn(true);
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(Optional.empty());
-      when(repository.save(any())).thenThrow(new DataIntegrityViolationException(""));
+      when(repository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException(""));
 
       assertThatThrownBy(() -> service.assignSquadron(squadronId, request))
           .isInstanceOf(ConflictException.class);
@@ -246,13 +234,13 @@ class SquadronAssignmentServiceTest {
       when(userRepository.existsById(request.userId())).thenReturn(true);
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(Optional.of(existing));
-      when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+      when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
       service.transferSquadronAssignment(newSquadronId, request);
 
       assertThat(existing.getRevokedAt()).isInThePast();
       verify(repository).saveAndFlush(existing);
-      verify(repository).save(any(SquadronAssignment.class));
+      verify(repository, times(2)).saveAndFlush(any(SquadronAssignment.class));
     }
 
     @Test
@@ -349,7 +337,7 @@ class SquadronAssignmentServiceTest {
 
       service.revokeSquadronAssignment(squadronId, userId);
 
-      assert (assignment.getRevokedAt()).isBefore(Instant.now());
+      assertThat(assignment.getRevokedAt()).isInThePast();
     }
 
     @Test

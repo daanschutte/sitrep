@@ -41,9 +41,7 @@ public class SquadronAssignmentService {
   }
 
   public List<SquadronAssignmentDto> getSquadronAssignmentsBySquadronId(UUID squadronId) {
-    return repository.findBySquadronIdAndRevokedAtIsNull(squadronId).stream()
-        .map(this::toDto)
-        .toList();
+    return repository.findAllBySquadronIdAndRevokedAtIsNull(squadronId);
   }
 
   public SquadronAssignmentDto getSquadronAssignmentByUserId(UUID userId) {
@@ -132,7 +130,7 @@ public class SquadronAssignmentService {
     SquadronAssignment assignment =
         new SquadronAssignment(squadronId, request.userId(), request.role());
     try {
-      assignment = repository.save(assignment);
+      assignment = repository.saveAndFlush(assignment);
       log.debug(
           "Squadron assignment with id={} created ({}:{}) in role={}",
           assignment.getId(),
@@ -147,7 +145,7 @@ public class SquadronAssignmentService {
   }
 
   private void revoke(SquadronAssignment assignment) {
-    assignment.revokeAssignment(Instant.now());
+    assignment.revoke(Instant.now());
     repository.saveAndFlush(assignment);
     log.debug(
         "Squadron assignment with id={} ended for user={}",

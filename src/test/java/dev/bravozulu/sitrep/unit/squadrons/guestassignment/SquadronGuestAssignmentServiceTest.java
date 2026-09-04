@@ -146,7 +146,7 @@ class SquadronGuestAssignmentServiceTest {
       assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
           .isInstanceOf(ConflictException.class);
 
-      verify(repository, never()).save(any());
+      verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -164,7 +164,8 @@ class SquadronGuestAssignmentServiceTest {
 
       ArgumentCaptor<SquadronGuestAssignment> captor =
           ArgumentCaptor.forClass(SquadronGuestAssignment.class);
-      when(repository.save(captor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+      when(repository.saveAndFlush(captor.capture()))
+          .thenAnswer(invocation -> invocation.getArgument(0));
 
       service.assignGuestSquadron(squadronId, request);
 
@@ -191,7 +192,7 @@ class SquadronGuestAssignmentServiceTest {
 
       assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
           .isInstanceOf(ConflictException.class);
-      verify(repository, never()).save(any());
+      verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -206,7 +207,7 @@ class SquadronGuestAssignmentServiceTest {
           .thenReturn(false);
       when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, request.userId()))
           .thenReturn(Optional.empty());
-      when(repository.save(any())).thenThrow(new DataIntegrityViolationException(""));
+      when(repository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException(""));
 
       assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
           .isInstanceOf(ConflictException.class);

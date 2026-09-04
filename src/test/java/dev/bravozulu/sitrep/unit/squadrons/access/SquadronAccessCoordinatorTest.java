@@ -14,7 +14,7 @@ import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronGuestAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.api.UserSquadronAccessDto;
-import dev.bravozulu.sitrep.squadrons.internal.access.SquadronAccessServiceImpl;
+import dev.bravozulu.sitrep.squadrons.internal.access.SquadronAccessCoordinator;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentService;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentService;
@@ -28,16 +28,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class SquadronAccessServiceImplTest {
+class SquadronAccessCoordinatorTest {
   @Mock SquadronAssignmentService squadronAssignmentService;
   @Mock SquadronGuestAssignmentService squadronGuestAssignmentService;
 
-  SquadronAccessServiceImpl service;
+  SquadronAccessCoordinator service;
 
   @BeforeEach
   void setUp() {
     service =
-        new SquadronAccessServiceImpl(squadronAssignmentService, squadronGuestAssignmentService);
+        new SquadronAccessCoordinator(squadronAssignmentService, squadronGuestAssignmentService);
   }
 
   @Nested
@@ -144,7 +144,8 @@ class SquadronAccessServiceImplTest {
 
       verify(squadronAssignmentService)
           .assignSquadron(
-              eq(squadronId), eq(new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT)));
+              eq(squadronId),
+              eq(new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT)));
       verify(squadronGuestAssignmentService, never()).revokeSquadronGuestAssignment(any(), any());
     }
 
@@ -176,7 +177,8 @@ class SquadronAccessServiceImplTest {
 
       verify(squadronAssignmentService)
           .transferSquadronAssignment(
-              eq(squadronId), eq(new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT)));
+              eq(squadronId),
+              eq(new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT)));
       verify(squadronGuestAssignmentService, never()).revokeSquadronGuestAssignment(any(), any());
     }
 
@@ -191,6 +193,33 @@ class SquadronAccessServiceImplTest {
       service.transferSquadronAssignment(squadronId, userId, SquadronRole.STUDENT);
 
       verify(squadronGuestAssignmentService).revokeSquadronGuestAssignment(squadronId, userId);
+    }
+  }
+
+  @Nested
+  class ChangeSquadronRole {
+    @Test
+    void changeSquadronRole_delegatesToAssignmentService() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+
+      service.changeSquadronRole(squadronId, userId, SquadronRole.INSTRUCTOR);
+
+      verify(squadronAssignmentService)
+          .changeSquadronRole(squadronId, userId, SquadronRole.INSTRUCTOR);
+    }
+  }
+
+  @Nested
+  class RevokeSquadronAssignment {
+    @Test
+    void revokeSquadronAssignment_delegatesToAssignmentService() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+
+      service.revokeSquadronAssignment(squadronId, userId);
+
+      verify(squadronAssignmentService).revokeSquadronAssignment(squadronId, userId);
     }
   }
 }
