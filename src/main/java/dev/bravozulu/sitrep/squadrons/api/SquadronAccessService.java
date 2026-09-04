@@ -6,7 +6,7 @@ import org.springframework.modulith.NamedInterface;
 
 @NamedInterface
 public interface SquadronAccessService {
-  SquadronAccessDto getSquadronAccessByUserId(UUID userId);
+  UserSquadronAccessDto getSquadronAccessByUserId(UUID userId);
 
-  List<SquadronAccessDto> getSquadronAccessBySquadronIdDtos(UUID squadronId);
+  List<SquadronAccessDto> getSquadronAccessBySquadronId(UUID squadronId);
 }

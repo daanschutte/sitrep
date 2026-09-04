@@ -40,8 +40,12 @@ public class SquadronGuestAssignmentService {
     return repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId);
   }
 
-  public List<SquadronGuestAssignmentDto> getSquadronGuestAssignment(UUID userId) {
+  public List<SquadronGuestAssignmentDto> getSquadronGuestAssignmentsByUserId(UUID userId) {
     return repository.findAllByUserIdAndRevokedAtIsNull(userId).stream().map(this::toDto).toList();
+  }
+
+  public List<SquadronGuestAssignmentDto> getSquadronGuestAssignmentsBySquadronId(UUID squadronId) {
+    return repository.findBySquadronIdAndRevokedAtIsNull(squadronId);
   }
 
   @Transactional
@@ -117,6 +121,6 @@ public class SquadronGuestAssignmentService {
 
   private SquadronGuestAssignmentDto toDto(SquadronGuestAssignment guestAssignment) {
     return new SquadronGuestAssignmentDto(
-        guestAssignment.getId(), guestAssignment.getSquadronId(), guestAssignment.getRole());
+        guestAssignment.getUserId(), guestAssignment.getSquadronId(), guestAssignment.getRole());
   }
 }
