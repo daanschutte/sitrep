@@ -23,13 +23,20 @@ public class SquadronGuestAssignmentController {
   }
 
   @PostMapping("/{squadronId}/guest-assignments")
-  public ResponseEntity<Void> createSquadronGuestAssignment(
+  public ResponseEntity<Void> assignGuestSquadron(
       @PathVariable UUID squadronId,
       @RequestBody @Valid SquadronGuestAssignmentCreateRequest request) {
-    service.createSquadronGuestAssignment(squadronId, request);
-    return ResponseEntity.created(
-            URI.create("/api/v1/squadrons/" + squadronId + "/guest-assignments"))
-        .build();
+    service.assignGuestSquadron(squadronId, request);
+    return ResponseEntity.created(URI.create("/api/v1/squadrons/" + squadronId + "/guest-assignments")).build();
+  }
+
+  @PutMapping("/{squadronId}/guest-assignments/{userId}/role")
+  public ResponseEntity<Void> changeGuestSquadronRole(
+      @PathVariable UUID squadronId,
+      @PathVariable UUID userId,
+      @RequestBody @Valid SquadronGuestAssignmentRoleChangeRequest request) {
+    service.changeGuestSquadronRole(squadronId, userId, request.role());
+    return ResponseEntity.noContent().build();
   }
 
   @PutMapping("/{squadronId}/guest-assignments/{userId}/revoke")

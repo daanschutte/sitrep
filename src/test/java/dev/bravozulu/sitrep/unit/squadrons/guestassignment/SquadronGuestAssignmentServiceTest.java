@@ -58,22 +58,6 @@ class SquadronGuestAssignmentServiceTest {
   }
 
   @Nested
-  class FindSquadronGuestAssignment {
-    @Test
-    void findSquadronGuestAssignment_delegatesToRepository() {
-      UUID squadronId = UUID.randomUUID();
-      UUID userId = UUID.randomUUID();
-      SquadronGuestAssignment assignment =
-          new SquadronGuestAssignment(squadronId, userId, SquadronRole.OPS);
-      ReflectionTestUtils.setField(assignment, "id", UUID.randomUUID());
-      when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId))
-          .thenReturn(Optional.of(assignment));
-
-      assertThat(service.findSquadronGuestAssignment(squadronId, userId)).contains(assignment);
-    }
-  }
-
-  @Nested
   class GetSquadronGuestAssignmentsByUserId {
     @Test
     void getSquadronGuestAssignmentsByUserId_mapsToDtos() {
@@ -122,22 +106,22 @@ class SquadronGuestAssignmentServiceTest {
   }
 
   @Nested
-  class CreateSquadronGuestAssignment {
+  class AssignGuestSquadron {
     @Test
-    void createSquadronGuestAssignment_squadronNotFound_throwsException() {
+    void assignGuestSquadron_squadronNotFound_throwsException() {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentCreateRequest request =
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(false);
 
-      assertThatThrownBy(() -> service.createSquadronGuestAssignment(squadronId, request))
+      assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
           .isExactlyInstanceOf(SquadronNotFoundException.class)
           .hasMessageContaining(squadronId.toString());
     }
 
     @Test
-    void createSquadronGuestAssignment_userNotFound_throwsException() {
+    void assignGuestSquadron_userNotFound_throwsException() {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentCreateRequest request =
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
@@ -145,13 +129,13 @@ class SquadronGuestAssignmentServiceTest {
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
       when(userRepository.existsById(request.userId())).thenReturn(false);
 
-      assertThatThrownBy(() -> service.createSquadronGuestAssignment(squadronId, request))
+      assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
           .isExactlyInstanceOf(UserNotFoundException.class)
           .hasMessageContaining(request.userId().toString());
     }
 
     @Test
-    void createSquadronGuestAssignment_targetIsPrimarySquadron_throwsConflictException() {
+    void assignGuestSquadron_targetIsPrimarySquadron_throwsConflictException() {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentCreateRequest request =
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
@@ -161,14 +145,14 @@ class SquadronGuestAssignmentServiceTest {
       when(squadronAssignmentService.isUserPrimarySquadron(squadronId, request.userId()))
           .thenReturn(true);
 
-      assertThatThrownBy(() -> service.createSquadronGuestAssignment(squadronId, request))
+      assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
           .isInstanceOf(ConflictException.class);
 
       verify(repository, never()).save(any());
     }
 
     @Test
-    void createSquadronGuestAssignment_noExisting_persistsCorrectUserAndSquadronIds() {
+    void assignGuestSquadron_noExisting_persistsCorrectUserAndSquadronIds() {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentCreateRequest request =
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
@@ -184,7 +168,7 @@ class SquadronGuestAssignmentServiceTest {
           ArgumentCaptor.forClass(SquadronGuestAssignment.class);
       when(repository.save(captor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
 
-      service.createSquadronGuestAssignment(squadronId, request);
+      service.assignGuestSquadron(squadronId, request);
 
       SquadronGuestAssignment saved = captor.getValue();
       assertThat(saved.getUserId()).isEqualTo(request.userId());
@@ -193,7 +177,7 @@ class SquadronGuestAssignmentServiceTest {
     }
 
     @Test
-    void createSquadronGuestAssignment_existingWithDifferentRole_updatesRole() {
+    void assignGuestSquadron_existingActiveAssignment_throwsConflictException() {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentCreateRequest request =
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
@@ -207,36 +191,13 @@ class SquadronGuestAssignmentServiceTest {
       when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, request.userId()))
           .thenReturn(Optional.of(existing));
 
-      service.createSquadronGuestAssignment(squadronId, request);
-
-      assertThat(existing.getRole()).isEqualTo(SquadronRole.OPS);
-      verify(repository).saveAndFlush(existing);
+      assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
+          .isInstanceOf(ConflictException.class);
       verify(repository, never()).save(any());
     }
 
     @Test
-    void createSquadronGuestAssignment_existingWithSameRole_doesNothing() {
-      UUID squadronId = UUID.randomUUID();
-      SquadronGuestAssignmentCreateRequest request =
-          new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
-      SquadronGuestAssignment existing =
-          new SquadronGuestAssignment(squadronId, request.userId(), SquadronRole.OPS);
-
-      when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
-      when(squadronAssignmentService.isUserPrimarySquadron(squadronId, request.userId()))
-          .thenReturn(false);
-      when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, request.userId()))
-          .thenReturn(Optional.of(existing));
-
-      service.createSquadronGuestAssignment(squadronId, request);
-
-      verify(repository, never()).saveAndFlush(any());
-      verify(repository, never()).save(any());
-    }
-
-    @Test
-    void createSquadronGuestAssignment_duplicate_throwsConflictException() {
+    void assignGuestSquadron_duplicate_throwsConflictException() {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentCreateRequest request =
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
@@ -249,8 +210,54 @@ class SquadronGuestAssignmentServiceTest {
           .thenReturn(Optional.empty());
       when(repository.save(any())).thenThrow(new DataIntegrityViolationException(""));
 
-      assertThatThrownBy(() -> service.createSquadronGuestAssignment(squadronId, request))
+      assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
           .isInstanceOf(ConflictException.class);
+    }
+  }
+
+  @Nested
+  class ChangeGuestSquadronRole {
+    @Test
+    void changeGuestSquadronRole_differentRole_updatesRole() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+      SquadronGuestAssignment assignment =
+          new SquadronGuestAssignment(squadronId, userId, SquadronRole.STUDENT);
+
+      when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId))
+          .thenReturn(Optional.of(assignment));
+
+      service.changeGuestSquadronRole(squadronId, userId, SquadronRole.OPS);
+
+      assertThat(assignment.getRole()).isEqualTo(SquadronRole.OPS);
+      verify(repository).saveAndFlush(assignment);
+    }
+
+    @Test
+    void changeGuestSquadronRole_sameRole_doesNothing() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+      SquadronGuestAssignment assignment =
+          new SquadronGuestAssignment(squadronId, userId, SquadronRole.OPS);
+
+      when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId))
+          .thenReturn(Optional.of(assignment));
+
+      service.changeGuestSquadronRole(squadronId, userId, SquadronRole.OPS);
+
+      verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void changeGuestSquadronRole_notFound_throwsNotFoundException() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+      when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId))
+          .thenReturn(Optional.empty());
+
+      assertThatThrownBy(
+              () -> service.changeGuestSquadronRole(squadronId, userId, SquadronRole.OPS))
+          .isInstanceOf(SquadronGuestAssignmentNotFoundException.class);
     }
   }
 
@@ -269,6 +276,7 @@ class SquadronGuestAssignmentServiceTest {
       service.revokeSquadronGuestAssignment(squadronId, userId);
 
       assertThat(assignment.isActive()).isFalse();
+      verify(repository).saveAndFlush(assignment);
     }
 
     @Test

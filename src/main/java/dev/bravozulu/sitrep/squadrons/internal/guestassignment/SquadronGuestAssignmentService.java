@@ -3,11 +3,11 @@ package dev.bravozulu.sitrep.squadrons.internal.guestassignment;
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
 import dev.bravozulu.sitrep.squadrons.api.SquadronGuestAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
+import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentService;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,11 +35,6 @@ public class SquadronGuestAssignmentService {
     this.userQueryService = userQueryService;
   }
 
-  public Optional<SquadronGuestAssignment> findSquadronGuestAssignment(
-      UUID squadronId, UUID userId) {
-    return repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId);
-  }
-
   public List<SquadronGuestAssignmentDto> getSquadronGuestAssignmentsByUserId(UUID userId) {
     return repository.findAllByUserIdAndRevokedAtIsNull(userId).stream().map(this::toDto).toList();
   }
@@ -49,8 +44,7 @@ public class SquadronGuestAssignmentService {
   }
 
   @Transactional
-  public void createSquadronGuestAssignment(
-      UUID squadronId, SquadronGuestAssignmentCreateRequest request) {
+  public void assignGuestSquadron(UUID squadronId, SquadronGuestAssignmentCreateRequest request) {
     squadronQueryService.validateSquadronExists(squadronId);
     userQueryService.validateUserExists(request.userId());
 
@@ -67,39 +61,34 @@ public class SquadronGuestAssignmentService {
               + squadronId.toString());
     }
 
-    findSquadronGuestAssignment(squadronId, request.userId())
-        .ifPresentOrElse(
-            existing -> {
-              if (existing.getRole() != request.role()) {
-                existing.setRole(request.role());
-                repository.saveAndFlush(existing);
-              } else {
-                log.debug(
-                    "userId={} already has guest access to squadronId={} with role={}",
-                    request.userId().toString(),
-                    squadronId.toString(),
-                    request.role());
-              }
-            },
-            () -> {
-              SquadronGuestAssignment access =
-                  new SquadronGuestAssignment(squadronId, request.userId(), request.role());
-              try {
-                access = repository.save(access);
-                log.debug(
-                    "Squadron guest access with id={} created ({}:{}) in role={}",
-                    access.getId(),
-                    access.getSquadronId(),
-                    access.getUserId(),
-                    access.getRole());
-              } catch (DataIntegrityViolationException exception) {
-                String message =
-                    String.format(
-                        "Could not guest assign userID='%s' to squadron='%s'",
-                        request.userId(), squadronId);
-                throw new ConflictException(message);
-              }
-            });
+    if (repository
+        .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, request.userId())
+        .isPresent()) {
+      throw new ConflictException(
+          "userId="
+              + request.userId()
+              + " already has active guest access to squadronId="
+              + squadronId);
+    }
+
+    create(squadronId, request);
+  }
+
+  @Transactional
+  public void changeGuestSquadronRole(UUID squadronId, UUID userId, SquadronRole role) {
+    SquadronGuestAssignment assignment =
+        repository
+            .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId)
+            .orElseThrow(
+                () ->
+                    new SquadronGuestAssignmentNotFoundException(
+                        "Squadron guest assignment for squadronId="
+                            + squadronId.toString()
+                            + " userId="
+                            + userId.toString()
+                            + " not found"));
+
+    changeRole(assignment, role);
   }
 
   @Transactional
@@ -117,6 +106,40 @@ public class SquadronGuestAssignmentService {
                             + " not found"));
 
     guestAssignment.revokeAccess(Instant.now());
+    repository.saveAndFlush(guestAssignment);
+  }
+
+  private void create(UUID squadronId, SquadronGuestAssignmentCreateRequest request) {
+    SquadronGuestAssignment access =
+        new SquadronGuestAssignment(squadronId, request.userId(), request.role());
+    try {
+      access = repository.save(access);
+      log.debug(
+          "Squadron guest access with id={} created ({}:{}) in role={}",
+          access.getId(),
+          access.getSquadronId(),
+          access.getUserId(),
+          access.getRole());
+    } catch (DataIntegrityViolationException exception) {
+      throw new ConflictException(
+          String.format(
+              "Could not guest assign userID='%s' to squadron='%s'", request.userId(), squadronId));
+    }
+  }
+
+  private void changeRole(SquadronGuestAssignment assignment, SquadronRole role) {
+    if (assignment.getRole() == role) {
+      log.debug(
+          "userId={} already holds role={} at squadronId={}",
+          assignment.getUserId(),
+          role,
+          assignment.getSquadronId());
+      return;
+    }
+
+    assignment.setRole(role);
+    repository.saveAndFlush(assignment);
+    log.debug("Squadron guest assignment with id={} role changed to={}", assignment.getId(), role);
   }
 
   private SquadronGuestAssignmentDto toDto(SquadronGuestAssignment guestAssignment) {

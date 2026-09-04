@@ -12,6 +12,7 @@ import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentRepo
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignment;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentCreateRequest;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentRepository;
+import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentRoleChangeRequest;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.Squadron;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronRepository;
 import dev.bravozulu.sitrep.users.internal.User;
@@ -29,12 +30,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.ObjectMapper;
 
-/**
- * Targets the guest-assignment controller endpoints as agreed but not yet implemented: POST
- * /api/v1/squadrons/{squadronId}/guest-assignments and PUT
- * /api/v1/squadrons/{squadronId}/guest-assignments/{userId}/revoke, mirroring
- * SquadronAssignmentController. Expect these to fail (404) until the controller exists.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTests {
@@ -60,9 +55,9 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
   }
 
   @Nested
-  class CreateSquadronGuestAssignment {
+  class AssignGuestSquadron {
     @Test
-    void createSquadronGuestAssignment_creates_returnsCreated() throws Exception {
+    void assignGuestSquadron_creates_returnsCreated() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronGuestAssignmentCreateRequest(userId, SquadronRole.OPS));
@@ -82,7 +77,7 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
     }
 
     @Test
-    void createSquadronGuestAssignment_persistsCorrectUserAndSquadronIds() throws Exception {
+    void assignGuestSquadron_persistsCorrectUserAndSquadronIds() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronGuestAssignmentCreateRequest(userId, SquadronRole.OPS));
@@ -103,7 +98,7 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
     }
 
     @Test
-    void createSquadronGuestAssignment_targetIsPrimarySquadron_returnsConflict() throws Exception {
+    void assignGuestSquadron_targetIsPrimarySquadron_returnsConflict() throws Exception {
       assignmentRepository.save(
           new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR));
 
@@ -120,7 +115,24 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
     }
 
     @Test
-    void createSquadronGuestAssignment_nonExistentUser_returnsNotFound() throws Exception {
+    void assignGuestSquadron_alreadyActive_returnsConflict() throws Exception {
+      guestAssignmentRepository.save(
+          new SquadronGuestAssignment(squadronId, userId, SquadronRole.OPS));
+
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronGuestAssignmentCreateRequest(userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              post("/api/v1/squadrons/{squadronId}/guest-assignments", squadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isConflict());
+    }
+
+    @Test
+    void assignGuestSquadron_nonExistentUser_returnsNotFound() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS));
@@ -134,7 +146,7 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
     }
 
     @Test
-    void createSquadronGuestAssignment_nonExistentSquadron_returnsNotFound() throws Exception {
+    void assignGuestSquadron_nonExistentSquadron_returnsNotFound() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronGuestAssignmentCreateRequest(userId, SquadronRole.OPS));
@@ -148,7 +160,7 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
     }
 
     @Test
-    void createSquadronGuestAssignment_invalidBody_returnsUnprocessableContent() throws Exception {
+    void assignGuestSquadron_invalidBody_returnsUnprocessableContent() throws Exception {
       String nullUserId = "{\"userId\": null, \"role\": \"OPS\"}";
 
       mockMvc
@@ -169,7 +181,7 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
     }
 
     @Test
-    void createSquadronGuestAssignment_malformedUuid_returnsBadRequest() throws Exception {
+    void assignGuestSquadron_malformedUuid_returnsBadRequest() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronGuestAssignmentCreateRequest(userId, SquadronRole.OPS));
@@ -180,6 +192,64 @@ public class SquadronGuestAssignmentControllerTest extends AbstractIntegrationTe
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(body))
           .andExpect(status().isBadRequest());
+    }
+  }
+
+  @Nested
+  class ChangeGuestSquadronRole {
+    @Test
+    void changeGuestSquadronRole_found_returnsNoContent() throws Exception {
+      SquadronGuestAssignment assignment =
+          new SquadronGuestAssignment(squadronId, userId, SquadronRole.STUDENT);
+      guestAssignmentRepository.save(assignment);
+
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronGuestAssignmentRoleChangeRequest(SquadronRole.OPS));
+
+      mockMvc
+          .perform(
+              put(
+                      "/api/v1/squadrons/{squadronId}/guest-assignments/{userId}/role",
+                      squadronId,
+                      userId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNoContent());
+
+      SquadronGuestAssignment updated =
+          guestAssignmentRepository.findById(assignment.getId()).orElseThrow();
+      assertThat(updated.getRole()).isEqualTo(SquadronRole.OPS);
+    }
+
+    @Test
+    void changeGuestSquadronRole_notFound_returnsNotFound() throws Exception {
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronGuestAssignmentRoleChangeRequest(SquadronRole.OPS));
+
+      mockMvc
+          .perform(
+              put(
+                      "/api/v1/squadrons/{squadronId}/guest-assignments/{userId}/role",
+                      squadronId,
+                      UUID.randomUUID())
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void changeGuestSquadronRole_invalidBody_returnsUnprocessableContent() throws Exception {
+      mockMvc
+          .perform(
+              put(
+                      "/api/v1/squadrons/{squadronId}/guest-assignments/{userId}/role",
+                      squadronId,
+                      userId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{\"role\": null}"))
+          .andExpect(status().isUnprocessableContent());
     }
   }
 
