@@ -1,6 +1,7 @@
 package dev.bravozulu.sitrep.squadrons.internal.access;
 
 import dev.bravozulu.sitrep.squadrons.api.SquadronAccessDto;
+import dev.bravozulu.sitrep.squadrons.api.SquadronAccessService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,9 +16,9 @@ import java.util.UUID;
 @RequestMapping("/api/v1/squadrons")
 @Validated
 public class SquadronAccessController {
-    private final SquadronAccessServiceImpl service;
+    private final SquadronAccessService service;
 
-    public SquadronAccessController(SquadronAccessServiceImpl service) {
+    public SquadronAccessController(SquadronAccessService service) {
         this.service = service;
     }
 
