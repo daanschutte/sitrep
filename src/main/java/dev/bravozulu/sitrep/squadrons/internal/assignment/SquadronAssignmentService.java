@@ -5,7 +5,6 @@ import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,7 @@ public class SquadronAssignmentService {
   public boolean isUserPrimarySquadron(UUID squadronId, UUID userId) {
     return repository.findByUserIdAndRevokedAtIsNull(userId)
             .map(SquadronAssignment::getSquadronId)
-            .filter(userSquadron -> userSquadron == squadronId)
+            .filter(userSquadron -> userSquadron.equals(squadronId))
             .isPresent();
   }
 
