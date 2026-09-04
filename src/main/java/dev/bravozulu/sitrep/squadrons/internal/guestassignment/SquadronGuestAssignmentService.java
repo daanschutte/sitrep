@@ -1,6 +1,7 @@
 package dev.bravozulu.sitrep.squadrons.internal.guestassignment;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
+import dev.bravozulu.sitrep.shared.exceptions.NotFoundException;
 import dev.bravozulu.sitrep.squadrons.api.SquadronGuestAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
@@ -36,11 +37,11 @@ public class SquadronGuestAssignmentService {
   }
 
   public List<SquadronGuestAssignmentDto> getSquadronGuestAssignmentsByUserId(UUID userId) {
-    return repository.findAllByUserIdAndRevokedAtIsNull(userId).stream().map(this::toDto).toList();
+    return repository.findAllByUserIdAndRevokedAtIsNull(userId);
   }
 
   public List<SquadronGuestAssignmentDto> getSquadronGuestAssignmentsBySquadronId(UUID squadronId) {
-    return repository.findBySquadronIdAndRevokedAtIsNull(squadronId);
+    return repository.findAllBySquadronIdAndRevokedAtIsNull(squadronId);
   }
 
   @Transactional
@@ -54,7 +55,7 @@ public class SquadronGuestAssignmentService {
           squadronId,
           request.userId().toString());
 
-      throw new SquadronGuestAssignmentConflictException(
+      throw new ConflictException(
           "Cannot assign userId="
               + request.userId()
               + " as guest in their primary squadronId="
@@ -81,7 +82,7 @@ public class SquadronGuestAssignmentService {
             .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId)
             .orElseThrow(
                 () ->
-                    new SquadronGuestAssignmentNotFoundException(
+                    new NotFoundException(
                         "Squadron guest assignment for squadronId="
                             + squadronId.toString()
                             + " userId="
@@ -98,14 +99,14 @@ public class SquadronGuestAssignmentService {
             .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId)
             .orElseThrow(
                 () ->
-                    new SquadronGuestAssignmentNotFoundException(
+                    new NotFoundException(
                         "Squadron assignment for squadronId="
                             + squadronId.toString()
                             + " userId="
                             + userId.toString()
                             + " not found"));
 
-    guestAssignment.revokeAccess(Instant.now());
+    guestAssignment.revokeGuestAssignment(Instant.now());
     repository.saveAndFlush(guestAssignment);
   }
 
@@ -140,10 +141,5 @@ public class SquadronGuestAssignmentService {
     assignment.setRole(role);
     repository.saveAndFlush(assignment);
     log.debug("Squadron guest assignment with id={} role changed to={}", assignment.getId(), role);
-  }
-
-  private SquadronGuestAssignmentDto toDto(SquadronGuestAssignment guestAssignment) {
-    return new SquadronGuestAssignmentDto(
-        guestAssignment.getSquadronId(), guestAssignment.getUserId(), guestAssignment.getRole());
   }
 }

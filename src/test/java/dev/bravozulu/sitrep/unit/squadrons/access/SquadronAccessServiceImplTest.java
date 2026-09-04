@@ -2,15 +2,20 @@ package dev.bravozulu.sitrep.unit.squadrons.access;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.bravozulu.sitrep.shared.exceptions.NotFoundException;
 import dev.bravozulu.sitrep.squadrons.api.SquadronAccessDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronGuestAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.api.UserSquadronAccessDto;
 import dev.bravozulu.sitrep.squadrons.internal.access.SquadronAccessServiceImpl;
-import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentNotFoundException;
+import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentService;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentService;
 import java.util.List;
@@ -72,17 +77,17 @@ class SquadronAccessServiceImplTest {
 
       UserSquadronAccessDto result = service.getSquadronAccessByUserId(userId);
 
-      assertThat(result.guestAssignmentDtos()).isEmpty();
+      assertThat(result.guestAssignments()).isEmpty();
     }
 
     @Test
     void getByUserId_noPrimaryAssignment_propagatesNotFoundException() {
       UUID userId = UUID.randomUUID();
       when(squadronAssignmentService.getSquadronAssignmentByUserId(userId))
-          .thenThrow(new SquadronAssignmentNotFoundException("not found"));
+          .thenThrow(new NotFoundException("not found"));
 
       assertThatThrownBy(() -> service.getSquadronAccessByUserId(userId))
-          .isInstanceOf(SquadronAssignmentNotFoundException.class);
+          .isInstanceOf(NotFoundException.class);
     }
   }
 
@@ -122,6 +127,70 @@ class SquadronAccessServiceImplTest {
           .thenReturn(List.of());
 
       assertThat(service.getSquadronAccessBySquadronId(squadronId)).isEmpty();
+    }
+  }
+
+  @Nested
+  class AssignSquadron {
+    @Test
+    void assignSquadron_noOverlappingGuestAccess_onlyAssignsPrimary() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+
+      when(squadronGuestAssignmentService.hasActiveGuestAssignment(squadronId, userId))
+          .thenReturn(false);
+
+      service.assignSquadron(squadronId, userId, SquadronRole.STUDENT);
+
+      verify(squadronAssignmentService)
+          .assignSquadron(
+              eq(squadronId), eq(new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT)));
+      verify(squadronGuestAssignmentService, never()).revokeSquadronGuestAssignment(any(), any());
+    }
+
+    @Test
+    void assignSquadron_overlappingGuestAccess_revokesGuestAccess() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+
+      when(squadronGuestAssignmentService.hasActiveGuestAssignment(squadronId, userId))
+          .thenReturn(true);
+
+      service.assignSquadron(squadronId, userId, SquadronRole.STUDENT);
+
+      verify(squadronGuestAssignmentService).revokeSquadronGuestAssignment(squadronId, userId);
+    }
+  }
+
+  @Nested
+  class TransferSquadronAssignment {
+    @Test
+    void transferSquadronAssignment_noOverlappingGuestAccess_onlyTransfersPrimary() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+
+      when(squadronGuestAssignmentService.hasActiveGuestAssignment(squadronId, userId))
+          .thenReturn(false);
+
+      service.transferSquadronAssignment(squadronId, userId, SquadronRole.STUDENT);
+
+      verify(squadronAssignmentService)
+          .transferSquadronAssignment(
+              eq(squadronId), eq(new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT)));
+      verify(squadronGuestAssignmentService, never()).revokeSquadronGuestAssignment(any(), any());
+    }
+
+    @Test
+    void transferSquadronAssignment_overlappingGuestAccess_revokesGuestAccess() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+
+      when(squadronGuestAssignmentService.hasActiveGuestAssignment(squadronId, userId))
+          .thenReturn(true);
+
+      service.transferSquadronAssignment(squadronId, userId, SquadronRole.STUDENT);
+
+      verify(squadronGuestAssignmentService).revokeSquadronGuestAssignment(squadronId, userId);
     }
   }
 }

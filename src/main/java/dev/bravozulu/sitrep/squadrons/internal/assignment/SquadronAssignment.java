@@ -8,7 +8,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -54,7 +53,7 @@ public class SquadronAssignment extends BaseEntity {
     this.revokedAt = revokedAt;
   }
 
-  public Optional<Instant> getRevokedAt() {
-    return Optional.ofNullable(revokedAt);
+  public Instant getRevokedAt() {
+    return revokedAt;
   }
 }

@@ -11,7 +11,7 @@ public interface SquadronGuestAssignmentRepository
   Optional<SquadronGuestAssignment> findBySquadronIdAndUserIdAndRevokedAtIsNull(
       UUID squadronId, UUID userId);
 
-  List<SquadronGuestAssignment> findAllByUserIdAndRevokedAtIsNull(UUID userId);
+  List<SquadronGuestAssignmentDto> findAllByUserIdAndRevokedAtIsNull(UUID userId);
 
-  List<SquadronGuestAssignmentDto> findBySquadronIdAndRevokedAtIsNull(UUID squadronId);
+  List<SquadronGuestAssignmentDto> findAllBySquadronIdAndRevokedAtIsNull(UUID squadronId);
 }

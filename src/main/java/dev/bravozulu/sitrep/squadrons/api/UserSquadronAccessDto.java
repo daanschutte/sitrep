@@ -7,4 +7,4 @@ public record UserSquadronAccessDto(
     UUID primarySquadronId,
     UUID userId,
     SquadronRole role,
-    List<SquadronGuestAssignmentDto> guestAssignmentDtos) {}
+    List<SquadronGuestAssignmentDto> guestAssignments) {}

@@ -53,7 +53,7 @@ public class SquadronGuestAssignment extends BaseEntity {
     return revokedAt == null;
   }
 
-  public void revokeAccess(Instant revokedAt) {
+  public void revokeGuestAssignment(Instant revokedAt) {
     this.revokedAt = revokedAt;
   }
 }

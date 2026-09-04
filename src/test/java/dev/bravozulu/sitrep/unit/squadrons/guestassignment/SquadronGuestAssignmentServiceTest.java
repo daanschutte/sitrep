@@ -8,13 +8,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
+import dev.bravozulu.sitrep.shared.exceptions.NotFoundException;
 import dev.bravozulu.sitrep.squadrons.api.SquadronGuestAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentService;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignment;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentCreateRequest;
-import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentNotFoundException;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentRepository;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentService;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronNotFoundException;
@@ -35,7 +35,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class SquadronGuestAssignmentServiceTest {
@@ -63,9 +62,8 @@ class SquadronGuestAssignmentServiceTest {
     void getSquadronGuestAssignmentsByUserId_mapsToDtos() {
       UUID userId = UUID.randomUUID();
       UUID squadronId = UUID.randomUUID();
-      SquadronGuestAssignment assignment =
-          new SquadronGuestAssignment(squadronId, userId, SquadronRole.OPS);
-      ReflectionTestUtils.setField(assignment, "id", UUID.randomUUID());
+      SquadronGuestAssignmentDto assignment =
+          new SquadronGuestAssignmentDto(squadronId, userId, SquadronRole.OPS);
 
       when(repository.findAllByUserIdAndRevokedAtIsNull(userId)).thenReturn(List.of(assignment));
 
@@ -91,7 +89,7 @@ class SquadronGuestAssignmentServiceTest {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentDto dto =
           new SquadronGuestAssignmentDto(squadronId, UUID.randomUUID(), SquadronRole.OPS);
-      when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of(dto));
+      when(repository.findAllBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of(dto));
 
       assertThat(service.getSquadronGuestAssignmentsBySquadronId(squadronId)).containsExactly(dto);
     }
@@ -99,7 +97,7 @@ class SquadronGuestAssignmentServiceTest {
     @Test
     void getSquadronGuestAssignmentsBySquadronId_none_returnsEmptyList() {
       UUID squadronId = UUID.randomUUID();
-      when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of());
+      when(repository.findAllBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of());
 
       assertThat(service.getSquadronGuestAssignmentsBySquadronId(squadronId)).isEmpty();
     }
@@ -257,7 +255,7 @@ class SquadronGuestAssignmentServiceTest {
 
       assertThatThrownBy(
               () -> service.changeGuestSquadronRole(squadronId, userId, SquadronRole.OPS))
-          .isInstanceOf(SquadronGuestAssignmentNotFoundException.class);
+          .isInstanceOf(NotFoundException.class);
     }
   }
 
@@ -287,7 +285,7 @@ class SquadronGuestAssignmentServiceTest {
           .thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> service.revokeSquadronGuestAssignment(squadronId, userId))
-          .isInstanceOf(SquadronGuestAssignmentNotFoundException.class);
+          .isInstanceOf(NotFoundException.class);
     }
   }
 }

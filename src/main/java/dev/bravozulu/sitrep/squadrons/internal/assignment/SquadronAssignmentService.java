@@ -1,6 +1,7 @@
 package dev.bravozulu.sitrep.squadrons.internal.assignment;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
+import dev.bravozulu.sitrep.shared.exceptions.NotFoundException;
 import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
@@ -51,7 +52,7 @@ public class SquadronAssignmentService {
         .map(this::toDto)
         .orElseThrow(
             () ->
-                new SquadronAssignmentNotFoundException(
+                new NotFoundException(
                     "Squadron assignment for userId=" + userId.toString() + " not found"));
   }
 
@@ -79,7 +80,7 @@ public class SquadronAssignmentService {
             .findByUserIdAndRevokedAtIsNull(request.userId())
             .orElseThrow(
                 () ->
-                    new SquadronAssignmentNotFoundException(
+                    new NotFoundException(
                         "No active squadron assignment for userId="
                             + request.userId()
                             + " to transfer"));
@@ -100,7 +101,7 @@ public class SquadronAssignmentService {
             .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId)
             .orElseThrow(
                 () ->
-                    new SquadronAssignmentNotFoundException(
+                    new NotFoundException(
                         "Squadron assignment for squadronId="
                             + squadronId.toString()
                             + " userId="
@@ -117,7 +118,7 @@ public class SquadronAssignmentService {
             .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId)
             .orElseThrow(
                 () ->
-                    new SquadronAssignmentNotFoundException(
+                    new NotFoundException(
                         "Squadron assignment for squadronId="
                             + squadronId.toString()
                             + " userId="

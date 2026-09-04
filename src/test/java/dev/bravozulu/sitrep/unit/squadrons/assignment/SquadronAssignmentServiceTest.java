@@ -8,12 +8,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
+import dev.bravozulu.sitrep.shared.exceptions.NotFoundException;
 import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignment;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest;
-import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentNotFoundException;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentRepository;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentService;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronNotFoundException;
@@ -23,6 +23,7 @@ import dev.bravozulu.sitrep.users.api.UserQueryService;
 import dev.bravozulu.sitrep.users.internal.UserNotFoundException;
 import dev.bravozulu.sitrep.users.internal.UserRepository;
 import dev.bravozulu.sitrep.users.internal.UserService;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -147,7 +148,7 @@ class SquadronAssignmentServiceTest {
       when(repository.findByUserIdAndRevokedAtIsNull(any())).thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> service.getSquadronAssignmentByUserId(UUID.randomUUID()))
-          .isInstanceOf(SquadronAssignmentNotFoundException.class);
+          .isInstanceOf(NotFoundException.class);
     }
   }
 
@@ -249,7 +250,7 @@ class SquadronAssignmentServiceTest {
 
       service.transferSquadronAssignment(newSquadronId, request);
 
-      assertThat(existing.getRevokedAt()).isPresent();
+      assertThat(existing.getRevokedAt()).isInThePast();
       verify(repository).saveAndFlush(existing);
       verify(repository).save(any(SquadronAssignment.class));
     }
@@ -266,7 +267,7 @@ class SquadronAssignmentServiceTest {
           .thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> service.transferSquadronAssignment(newSquadronId, request))
-          .isInstanceOf(SquadronAssignmentNotFoundException.class);
+          .isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -330,7 +331,7 @@ class SquadronAssignmentServiceTest {
           .thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> service.changeSquadronRole(squadronId, userId, SquadronRole.OPS))
-          .isInstanceOf(SquadronAssignmentNotFoundException.class);
+          .isInstanceOf(NotFoundException.class);
     }
   }
 
@@ -348,7 +349,7 @@ class SquadronAssignmentServiceTest {
 
       service.revokeSquadronAssignment(squadronId, userId);
 
-      assertThat(assignment.getRevokedAt()).isPresent();
+      assert (assignment.getRevokedAt()).isBefore(Instant.now());
     }
 
     @Test
@@ -359,7 +360,7 @@ class SquadronAssignmentServiceTest {
           .thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> service.revokeSquadronAssignment(squadronId, userId))
-          .isInstanceOf(SquadronAssignmentNotFoundException.class);
+          .isInstanceOf(NotFoundException.class);
     }
   }
 }

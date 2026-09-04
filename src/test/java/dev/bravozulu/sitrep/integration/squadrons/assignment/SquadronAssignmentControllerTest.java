@@ -11,6 +11,8 @@ import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignment;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentRepository;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentRoleChangeRequest;
+import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignment;
+import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentRepository;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.Squadron;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronRepository;
 import dev.bravozulu.sitrep.users.internal.User;
@@ -35,6 +37,7 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private SquadronAssignmentRepository assignmentRepository;
+  @Autowired private SquadronGuestAssignmentRepository guestAssignmentRepository;
   @Autowired private SquadronRepository squadronRepository;
   @Autowired private UserRepository userRepository;
 
@@ -142,6 +145,28 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
     }
 
     @Test
+    void assignSquadron_existingGuestAccessToSameSquadron_revokesGuestAccess() throws Exception {
+      SquadronGuestAssignment guestAssignment =
+          new SquadronGuestAssignment(squadronId, userId, SquadronRole.OPS);
+      guestAssignmentRepository.save(guestAssignment);
+
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              post("/api/v1/squadrons/{squadronId}/assignments", squadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isCreated());
+
+      SquadronGuestAssignment updatedGuestAssignment =
+          guestAssignmentRepository.findById(guestAssignment.getId()).orElseThrow();
+      assertThat(updatedGuestAssignment.isActive()).isFalse();
+    }
+
+    @Test
     void assignSquadron_malformedUuid_returnsBadRequest() throws Exception {
       String body =
           objectMapper.writeValueAsString(
@@ -178,7 +203,7 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
 
       SquadronAssignment updatedExisting =
           assignmentRepository.findById(existing.getId()).orElseThrow();
-      assertThat(updatedExisting.getRevokedAt()).isPresent();
+      assertThat(updatedExisting.getRevokedAt()).isInThePast();
 
       List<SquadronAssignment> currentAssignments =
           assignmentRepository.findByUserIdAndRevokedAtIsNull(userId).stream().toList();
@@ -198,6 +223,32 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(body))
           .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void transferSquadronAssignment_existingGuestAccessToTargetSquadron_revokesGuestAccess()
+        throws Exception {
+      assignmentRepository.save(new SquadronAssignment(squadronId, userId, SquadronRole.STUDENT));
+
+      UUID newSquadronId = squadronRepository.save(new Squadron("2 Squadron", "2SQN")).getId();
+      SquadronGuestAssignment guestAssignment =
+          new SquadronGuestAssignment(newSquadronId, userId, SquadronRole.OPS);
+      guestAssignmentRepository.save(guestAssignment);
+
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/transfer", newSquadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNoContent());
+
+      SquadronGuestAssignment updatedGuestAssignment =
+          guestAssignmentRepository.findById(guestAssignment.getId()).orElseThrow();
+      assertThat(updatedGuestAssignment.isActive()).isFalse();
     }
 
     @Test
@@ -283,7 +334,7 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
           .andExpect(status().isNoContent());
 
       SquadronAssignment updated = assignmentRepository.findById(assignment.getId()).orElseThrow();
-      assertThat(updated.getRevokedAt()).isPresent();
+      assertThat(updated.getRevokedAt()).isInThePast();
     }
 
     @Test
@@ -296,10 +347,28 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
                   UUID.randomUUID()))
           .andExpect(status().isNotFound());
     }
+
+    @Test
+    void revokeSquadronAssignment_alreadyRevoked_returnsNotFound() throws Exception {
+      SquadronAssignment assignment =
+          new SquadronAssignment(squadronId, userId, SquadronRole.STUDENT);
+      assignmentRepository.save(assignment);
+
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/{userId}/revoke", squadronId, userId))
+          .andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/{userId}/revoke", squadronId, userId))
+          .andExpect(status().isNotFound());
+    }
   }
 
   @AfterEach
   void tearDown() {
+    guestAssignmentRepository.deleteAll();
     assignmentRepository.deleteAll();
     userRepository.deleteAll();
     squadronRepository.deleteAll();

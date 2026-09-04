@@ -62,7 +62,7 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
           .andExpect(jsonPath("$.userId").value(userId.toString()))
           .andExpect(jsonPath("$.primarySquadronId").value(squadronId.toString()))
           .andExpect(jsonPath("$.role").value("INSTRUCTOR"))
-          .andExpect(jsonPath("$.guestAssignmentDtos").isEmpty());
+          .andExpect(jsonPath("$.guestAssignments").isEmpty());
     }
 
     @Test
@@ -77,9 +77,8 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
       mockMvc
           .perform(get("/api/v1/squadrons/assignments").param("userId", userId.toString()))
           .andExpect(status().isOk())
-          .andExpect(
-              jsonPath("$.guestAssignmentDtos[0].squadronId").value(guestSquadronId.toString()))
-          .andExpect(jsonPath("$.guestAssignmentDtos[0].role").value("OPS"));
+          .andExpect(jsonPath("$.guestAssignments[0].squadronId").value(guestSquadronId.toString()))
+          .andExpect(jsonPath("$.guestAssignments[0].role").value("OPS"));
     }
 
     @Test
@@ -97,9 +96,9 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
       mockMvc
           .perform(get("/api/v1/squadrons/assignments").param("userId", userId.toString()))
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$.guestAssignmentDtos.length()").value(2))
+          .andExpect(jsonPath("$.guestAssignments.length()").value(2))
           .andExpect(
-              jsonPath("$.guestAssignmentDtos[*].squadronId")
+              jsonPath("$.guestAssignments[*].squadronId")
                   .value(
                       containsInAnyOrder(
                           guestSquadronId1.toString(), guestSquadronId2.toString())));
