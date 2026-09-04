@@ -102,11 +102,11 @@ class SquadronAssignmentServiceTest {
 
       SquadronAssignmentDto assignment1Dto =
           new SquadronAssignmentDto(
-                  assignment1.getSquadronId(), assignment1.getUserId(), assignment1.getRole());
+              assignment1.getSquadronId(), assignment1.getUserId(), assignment1.getRole());
       ReflectionTestUtils.setField(assignment1, "id", UUID.randomUUID());
       SquadronAssignmentDto assignment2Dto =
           new SquadronAssignmentDto(
-                  assignment2.getSquadronId(), assignment2.getUserId(), assignment2.getRole());
+              assignment2.getSquadronId(), assignment2.getUserId(), assignment2.getRole());
       ReflectionTestUtils.setField(assignment2, "id", UUID.randomUUID());
 
       List<SquadronAssignmentDto> result = service.getSquadronAssignmentsBySquadronId(squadronId);

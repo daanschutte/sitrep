@@ -6,9 +6,9 @@ import static org.mockito.Mockito.when;
 
 import dev.bravozulu.sitrep.squadrons.api.SquadronAccessDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
-import dev.bravozulu.sitrep.squadrons.api.UserSquadronAccessDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronGuestAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
+import dev.bravozulu.sitrep.squadrons.api.UserSquadronAccessDto;
 import dev.bravozulu.sitrep.squadrons.internal.access.SquadronAccessServiceImpl;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentNotFoundException;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentService;
@@ -56,7 +56,7 @@ class SquadronAccessServiceImplTest {
       assertThat(result)
           .isEqualTo(
               new UserSquadronAccessDto(
-                      primarySquadronId, userId, SquadronRole.INSTRUCTOR, List.of(guestDto)));
+                  primarySquadronId, userId, SquadronRole.INSTRUCTOR, List.of(guestDto)));
     }
 
     @Test

@@ -1,8 +1,8 @@
 package dev.bravozulu.sitrep.squadrons.internal.access;
 
 import dev.bravozulu.sitrep.squadrons.api.SquadronAccessDto;
-import dev.bravozulu.sitrep.squadrons.api.UserSquadronAccessDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronAccessService;
+import dev.bravozulu.sitrep.squadrons.api.UserSquadronAccessDto;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.validation.annotation.Validated;

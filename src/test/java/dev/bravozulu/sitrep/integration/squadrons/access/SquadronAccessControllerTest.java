@@ -118,8 +118,10 @@ public class SquadronAccessControllerTest extends AbstractIntegrationTests {
 
     @Test
     void getBySquadronId_includesGuestMember_returnsAccess() throws Exception {
-      UUID guestUserId = userRepository.save(new User("Amelia", "Earhart", "amelia@ae.com", "Capt")).getId();
-      guestAssignmentRepository.save(new SquadronGuestAssignment(squadronId, guestUserId, SquadronRole.OPS));
+      UUID guestUserId =
+          userRepository.save(new User("Amelia", "Earhart", "amelia@ae.com", "Capt")).getId();
+      guestAssignmentRepository.save(
+          new SquadronGuestAssignment(squadronId, guestUserId, SquadronRole.OPS));
 
       mockMvc
           .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))

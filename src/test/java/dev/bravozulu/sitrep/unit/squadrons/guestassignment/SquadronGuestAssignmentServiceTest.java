@@ -109,8 +109,7 @@ class SquadronGuestAssignmentServiceTest {
           new SquadronGuestAssignmentDto(squadronId, UUID.randomUUID(), SquadronRole.OPS);
       when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of(dto));
 
-      assertThat(service.getSquadronGuestAssignmentsBySquadronId(squadronId))
-          .containsExactly(dto);
+      assertThat(service.getSquadronGuestAssignmentsBySquadronId(squadronId)).containsExactly(dto);
     }
 
     @Test

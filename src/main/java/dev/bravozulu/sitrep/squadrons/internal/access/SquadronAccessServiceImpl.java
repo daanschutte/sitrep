@@ -10,7 +10,6 @@ import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssi
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import org.springframework.stereotype.Service;
 
 @Service
@@ -34,7 +33,7 @@ public class SquadronAccessServiceImpl implements SquadronAccessService {
         squadronGuestAssignmentService.getSquadronGuestAssignmentsByUserId(userId);
 
     return new UserSquadronAccessDto(
-            squadronAssignment.squadronId(), userId, squadronAssignment.role(), guestAssignments);
+        squadronAssignment.squadronId(), userId, squadronAssignment.role(), guestAssignments);
   }
 
   @Override
@@ -50,11 +49,11 @@ public class SquadronAccessServiceImpl implements SquadronAccessService {
   }
 
   private SquadronAccessDto toSquadronAccessDto(SquadronAssignmentDto assignment) {
-    return new SquadronAccessDto(
-            assignment.squadronId(), assignment.userId(), assignment.role());
+    return new SquadronAccessDto(assignment.squadronId(), assignment.userId(), assignment.role());
   }
 
   private SquadronAccessDto toSquadronAccessDto(SquadronGuestAssignmentDto assignment) {
-    return new SquadronAccessDto(assignment.squadronId(), assignment.userId(), assignment.role(), true);
+    return new SquadronAccessDto(
+        assignment.squadronId(), assignment.userId(), assignment.role(), true);
   }
 }

@@ -111,6 +111,6 @@ public class SquadronAssignmentService {
 
   private SquadronAssignmentDto toDto(SquadronAssignment assignment) {
     return new SquadronAssignmentDto(
-            assignment.getSquadronId(), assignment.getUserId(), assignment.getRole());
+        assignment.getSquadronId(), assignment.getUserId(), assignment.getRole());
   }
 }
