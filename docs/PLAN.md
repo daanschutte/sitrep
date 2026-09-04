@@ -1,20 +1,31 @@
 # Sitrep — Development Plan
 
-*Last updated: June 2026. Living document — update as decisions land.*
+*Last updated: September 2026. Living document — update as decisions land.*
 
 ---
 
 ## Context
 
-Sitrep is being built as both a portfolio piece and a sellable product. The spec (`SitRep_Spec.md`) is the authoritative architecture reference; this plan is the build sequence — phases, deliverables, and open decisions.
+Sitrep is primarily a **backend-focused portfolio project** — built while targeting backend roles, and the goal is to demonstrate production-grade backend engineering (Modulith boundaries, RLS multi-tenancy, hand-rolled outbox, hash-chained audit ledger, properly-implemented JWT/refresh auth) rather than to ship a sellable product. Any commercial angle is a possible future bonus, not the current driver of scope or sequencing decisions.
 
-Daan writes all implementation code. Claude's role is design review, explanation, and pointing out idioms and gotchas.
+A minimal React + TypeScript frontend will be added so recruiters have something tangible to click through — deliberately thin (a plain SPA against the REST API, no heavy tooling), not a product-grade UI. It is a secondary goal — real React/TS reps are wanted regardless, but backend depth takes priority when the two compete for time. The spec (`SitRep_Spec.md`) is the authoritative architecture reference; this plan is the build sequence — phases, deliverables, and open decisions.
+
+All implementation code is written by the developer. Claude's role is design review, explanation, and pointing out idioms and gotchas (backend: review-only; frontend: more actively teach, since it's new territory — see `AGENTS.md`).
 
 ---
 
-## Where We Are (June 2026)
+## Where We Are (September 2026)
 
-Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module in progress (`Squadron`, `SquadronAssignment`, `SquadronGuestAccess` entities, CRUD + enable/disable + assignment endpoints, migrations V01–V04, `SquadronQueryService` and `UserQueryService` cross-module interfaces wired).
+Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module in progress (`Squadron`, `SquadronAssignment`, `SquadronGuestAssignment` entities, CRUD + enable/disable + assignment endpoints, migrations V01–V04, `SquadronQueryService` and `UserQueryService` cross-module interfaces wired). `SquadronGuestAssignment` still needs its repository/service/controller.
+
+**Current priority order** (chosen for hiring-signal impact — these are the most differentiated pieces of the system, not generic CRUD):
+1. Finish `SquadronGuestAssignment` (close out `squadrons`)
+2. `auth` — JWT + refresh token flow
+3. `outbox` — hand-rolled dispatch loops
+4. `audit` — hash-chained ledger
+5. RLS proof via the `rooms` stub endpoint
+
+Platforms/courses/scheduling (Phases 2–4) are deferred until Phase 1 is fully complete. First frontend slice: a login screen wired to the real JWT/refresh-cookie flow, once `auth` lands.
 
 ---
 
@@ -22,7 +33,7 @@ Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons`
 
 See the spec for full rationale. Summary:
 
-- **Stack**: Java 21, Spring Boot 4.x, Maven (single module), PostgreSQL 17, Spring Modulith 2.x, Spring Data JPA + Hibernate 6, Flyway
+- **Stack**: Java 25, Spring Boot 4.x, Maven (single module), PostgreSQL 17, Spring Modulith 2.x, Spring Data JPA + Hibernate 6, Flyway
 - **Web**: Spring MVC, not WebFlux. Virtual threads (`spring.threads.virtual.enabled: true`).
 - **Security**: Spring Security 6 + `oauth2-resource-server` for JWT validation, `nimbus-jose-jwt` for signing. Stateless — no sessions.
 - **Multi-tenancy**: Postgres RLS only. No Hibernate `@Filter`. See ADR-002.

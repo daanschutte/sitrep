@@ -269,7 +269,7 @@ Not RLS-scoped (squadron metadata is global). `enable()` / `disable()` domain me
 
 `ended_at IS NULL` replaces the `is_current` boolean — single source of truth. Transfer logic: end existing assignment (`saveAndFlush`), insert new one in same `@Transactional`. Not RLS-scoped.
 
-#### `squadrons.SquadronGuestAccess`
+#### `squadrons.SquadronGuestAssignment`
 - `id UUID PK`
 - `user_id UUID FK -> users.user`
 - `squadron_id UUID FK -> squadrons.squadron` (the squadron they're granted access to)

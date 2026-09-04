@@ -1,4 +1,4 @@
-package dev.bravozulu.sitrep.squadrons.internal.guestaccess;
+package dev.bravozulu.sitrep.squadrons.internal.guestassignment;
 
 import dev.bravozulu.sitrep.shared.domain.BaseEntity;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
@@ -11,8 +11,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "squadron_guest_access")
-public class SquadronGuestAccess extends BaseEntity {
+@Table(name = "squadron_guest_assignment")
+public class SquadronGuestAssignment extends BaseEntity {
   @Column(nullable = false)
   private UUID userId;
 
@@ -25,11 +25,11 @@ public class SquadronGuestAccess extends BaseEntity {
 
   private Instant revokedAt;
 
-  protected SquadronGuestAccess() {}
+  protected SquadronGuestAssignment() {}
 
-  public SquadronGuestAccess(UUID userId, UUID squadronId, SquadronRole role) {
-    this.userId = userId;
+  public SquadronGuestAssignment(UUID squadronId, UUID userId, SquadronRole role) {
     this.squadronId = squadronId;
+    this.userId = userId;
     this.role = role;
   }
 
@@ -45,7 +45,15 @@ public class SquadronGuestAccess extends BaseEntity {
     return role;
   }
 
+  public void setRole(SquadronRole role) {
+    this.role = role;
+  }
+
   public boolean isActive() {
     return revokedAt == null;
+  }
+
+  public void revoke(Instant revokedAt) {
+    this.revokedAt = revokedAt;
   }
 }

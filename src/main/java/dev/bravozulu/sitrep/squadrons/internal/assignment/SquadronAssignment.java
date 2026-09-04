@@ -8,7 +8,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -24,13 +23,13 @@ public class SquadronAssignment extends BaseEntity {
   @Enumerated(EnumType.STRING)
   private SquadronRole role;
 
-  private Instant endedAt;
+  private Instant revokedAt;
 
   protected SquadronAssignment() {}
 
-  public SquadronAssignment(UUID userId, UUID squadronId, SquadronRole role) {
-    this.userId = userId;
+  public SquadronAssignment(UUID squadronId, UUID userId, SquadronRole role) {
     this.squadronId = squadronId;
+    this.userId = userId;
     this.role = role;
   }
 
@@ -46,11 +45,15 @@ public class SquadronAssignment extends BaseEntity {
     return role;
   }
 
-  public void endAssignment(Instant endedAt) {
-    this.endedAt = endedAt;
+  public void setRole(SquadronRole role) {
+    this.role = role;
   }
 
-  public Optional<Instant> getEndedAt() {
-    return Optional.ofNullable(endedAt);
+  public void revoke(Instant revokedAt) {
+    this.revokedAt = revokedAt;
+  }
+
+  public Instant getRevokedAt() {
+    return revokedAt;
   }
 }
