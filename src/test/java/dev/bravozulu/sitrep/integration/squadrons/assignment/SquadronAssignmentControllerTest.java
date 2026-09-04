@@ -10,6 +10,7 @@ import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignment;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentCreateRequest;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentRepository;
+import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentRoleChangeRequest;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.Squadron;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronRepository;
 import dev.bravozulu.sitrep.users.internal.User;
@@ -52,9 +53,9 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
   }
 
   @Nested
-  class CreateSquadronAssignment {
+  class AssignSquadron {
     @Test
-    void createSquadronAssignment_creates_returnsCreated() throws Exception {
+    void assignSquadron_creates_returnsCreated() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
@@ -74,10 +75,9 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
     }
 
     @Test
-    void createSquadronAssignment_transfersExisting_returnsCreated() throws Exception {
-      SquadronAssignment existing =
-          new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR);
-      assignmentRepository.save(existing);
+    void assignSquadron_alreadyAssigned_returnsConflict() throws Exception {
+      assignmentRepository.save(
+          new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR));
 
       UUID newSquadronId = squadronRepository.save(new Squadron("2 Squadron", "2SQN")).getId();
       String body =
@@ -89,20 +89,11 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
               post("/api/v1/squadrons/{squadronId}/assignments", newSquadronId)
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(body))
-          .andExpect(status().isCreated());
-
-      SquadronAssignment updatedExisting =
-          assignmentRepository.findById(existing.getId()).orElseThrow();
-      assertThat(updatedExisting.getRevokedAt()).isPresent();
-
-      List<SquadronAssignment> currentAssignments =
-          assignmentRepository.findByUserIdAndRevokedAtIsNull(userId).stream().toList();
-      assertThat(currentAssignments.size()).isEqualTo(1);
-      assertThat(currentAssignments.getFirst().getSquadronId()).isEqualTo(newSquadronId);
+          .andExpect(status().isConflict());
     }
 
     @Test
-    void createSquadronAssignment_nonExistentUser_returnsNotFound() throws Exception {
+    void assignSquadron_nonExistentUser_returnsNotFound() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT));
@@ -116,7 +107,7 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
     }
 
     @Test
-    void createSquadronAssignment_nonExistentSquadron_returnsNotFound() throws Exception {
+    void assignSquadron_nonExistentSquadron_returnsNotFound() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
@@ -130,7 +121,7 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
     }
 
     @Test
-    void createSquadronAssignment_invalidBody_returnsUnprocessableContent() throws Exception {
+    void assignSquadron_invalidBody_returnsUnprocessableContent() throws Exception {
       String nullUserId = "{\"userId\": null, \"role\": \"STUDENT\"}";
 
       mockMvc
@@ -151,7 +142,7 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
     }
 
     @Test
-    void createSquadronAssignment_malformedUuid_returnsBadRequest() throws Exception {
+    void assignSquadron_malformedUuid_returnsBadRequest() throws Exception {
       String body =
           objectMapper.writeValueAsString(
               new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
@@ -162,6 +153,119 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(body))
           .andExpect(status().isBadRequest());
+    }
+  }
+
+  @Nested
+  class TransferSquadronAssignment {
+    @Test
+    void transferSquadronAssignment_existingAssignment_movesToNewSquadron() throws Exception {
+      SquadronAssignment existing =
+          new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR);
+      assignmentRepository.save(existing);
+
+      UUID newSquadronId = squadronRepository.save(new Squadron("2 Squadron", "2SQN")).getId();
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/transfer", newSquadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNoContent());
+
+      SquadronAssignment updatedExisting =
+          assignmentRepository.findById(existing.getId()).orElseThrow();
+      assertThat(updatedExisting.getRevokedAt()).isPresent();
+
+      List<SquadronAssignment> currentAssignments =
+          assignmentRepository.findByUserIdAndRevokedAtIsNull(userId).stream().toList();
+      assertThat(currentAssignments.size()).isEqualTo(1);
+      assertThat(currentAssignments.getFirst().getSquadronId()).isEqualTo(newSquadronId);
+    }
+
+    @Test
+    void transferSquadronAssignment_noExistingAssignment_returnsNotFound() throws Exception {
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/transfer", squadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void transferSquadronAssignment_sameSquadron_returnsConflict() throws Exception {
+      assignmentRepository.save(
+          new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR));
+
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentCreateRequest(userId, SquadronRole.STUDENT));
+
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/transfer", squadronId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isConflict());
+    }
+  }
+
+  @Nested
+  class ChangeSquadronRole {
+    @Test
+    void changeSquadronRole_found_returnsNoContent() throws Exception {
+      SquadronAssignment assignment =
+          new SquadronAssignment(squadronId, userId, SquadronRole.STUDENT);
+      assignmentRepository.save(assignment);
+
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentRoleChangeRequest(SquadronRole.INSTRUCTOR));
+
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/{userId}/role", squadronId, userId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNoContent());
+
+      SquadronAssignment updated = assignmentRepository.findById(assignment.getId()).orElseThrow();
+      assertThat(updated.getRole()).isEqualTo(SquadronRole.INSTRUCTOR);
+    }
+
+    @Test
+    void changeSquadronRole_notFound_returnsNotFound() throws Exception {
+      String body =
+          objectMapper.writeValueAsString(
+              new SquadronAssignmentRoleChangeRequest(SquadronRole.INSTRUCTOR));
+
+      mockMvc
+          .perform(
+              put(
+                      "/api/v1/squadrons/{squadronId}/assignments/{userId}/role",
+                      squadronId,
+                      UUID.randomUUID())
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(body))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void changeSquadronRole_invalidBody_returnsUnprocessableContent() throws Exception {
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/{userId}/role", squadronId, userId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{\"role\": null}"))
+          .andExpect(status().isUnprocessableContent());
     }
   }
 

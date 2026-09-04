@@ -3,6 +3,7 @@ package dev.bravozulu.sitrep.squadrons.internal.assignment;
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
 import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
+import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
 import java.time.Instant;
 import java.util.List;
@@ -55,49 +56,58 @@ public class SquadronAssignmentService {
   }
 
   @Transactional
-  public void createSquadronAssignment(UUID squadronId, SquadronAssignmentCreateRequest request) {
+  public void assignSquadron(UUID squadronId, SquadronAssignmentCreateRequest request) {
     squadronQueryService.validateSquadronExists(squadronId);
     userQueryService.validateUserExists(request.userId());
 
-    repository
-        .findByUserIdAndRevokedAtIsNull(request.userId())
-        .ifPresentOrElse(
-            existing -> {
-              if (existing.getSquadronId().equals(squadronId)) {
-                if (existing.getRole().equals(request.role())) {
-                  log.error(
-                      "userId={} already holds role={} at squadronId={}",
-                      request.userId(),
-                      request.role(),
-                      squadronId);
-                } else {
-                  existing.setRole(request.role());
-                  repository.saveAndFlush(existing);
-                }
-              }
-            },
-            () -> {
-              log.debug("No existing squadron assignments for userId={}", request.userId());
+    if (repository.findByUserIdAndRevokedAtIsNull(request.userId()).isPresent()) {
+      throw new ConflictException(
+          "userId=" + request.userId() + " already has an active squadron assignment");
+    }
 
-              SquadronAssignment assignment =
-                  new SquadronAssignment(squadronId, request.userId(), request.role());
+    create(squadronId, request);
+  }
 
-              try {
-                assignment = repository.save(assignment);
-                log.debug(
-                    "Squadron assignment with id={} created ({}:{}) in role={}",
-                    assignment.getId(),
-                    assignment.getSquadronId(),
-                    assignment.getUserId(),
-                    assignment.getRole());
-              } catch (DataIntegrityViolationException exception) {
-                String message =
-                    String.format(
-                        "Could not assign userID='%s' to squadron='%s'",
-                        request.userId(), squadronId);
-                throw new ConflictException(message);
-              }
-            });
+  @Transactional
+  public void transferSquadronAssignment(
+      UUID newSquadronId, SquadronAssignmentCreateRequest request) {
+    squadronQueryService.validateSquadronExists(newSquadronId);
+    userQueryService.validateUserExists(request.userId());
+
+    SquadronAssignment existing =
+        repository
+            .findByUserIdAndRevokedAtIsNull(request.userId())
+            .orElseThrow(
+                () ->
+                    new SquadronAssignmentNotFoundException(
+                        "No active squadron assignment for userId="
+                            + request.userId()
+                            + " to transfer"));
+
+    if (existing.getSquadronId().equals(newSquadronId)) {
+      throw new ConflictException(
+          "userId=" + request.userId() + " is already assigned to squadronId=" + newSquadronId);
+    }
+
+    revoke(existing);
+    create(newSquadronId, request);
+  }
+
+  @Transactional
+  public void changeSquadronRole(UUID squadronId, UUID userId, SquadronRole role) {
+    SquadronAssignment assignment =
+        repository
+            .findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId)
+            .orElseThrow(
+                () ->
+                    new SquadronAssignmentNotFoundException(
+                        "Squadron assignment for squadronId="
+                            + squadronId.toString()
+                            + " userId="
+                            + userId.toString()
+                            + " not found"));
+
+    changeRole(assignment, role);
   }
 
   @Transactional
@@ -114,7 +124,49 @@ public class SquadronAssignmentService {
                             + userId.toString()
                             + " not found"));
 
+    revoke(assignment);
+  }
+
+  private void create(UUID squadronId, SquadronAssignmentCreateRequest request) {
+    SquadronAssignment assignment =
+        new SquadronAssignment(squadronId, request.userId(), request.role());
+    try {
+      assignment = repository.save(assignment);
+      log.debug(
+          "Squadron assignment with id={} created ({}:{}) in role={}",
+          assignment.getId(),
+          assignment.getSquadronId(),
+          assignment.getUserId(),
+          assignment.getRole());
+    } catch (DataIntegrityViolationException exception) {
+      throw new ConflictException(
+          String.format(
+              "Could not assign userID='%s' to squadron='%s'", request.userId(), squadronId));
+    }
+  }
+
+  private void revoke(SquadronAssignment assignment) {
     assignment.revokeAssignment(Instant.now());
+    repository.saveAndFlush(assignment);
+    log.debug(
+        "Squadron assignment with id={} ended for user={}",
+        assignment.getId(),
+        assignment.getUserId());
+  }
+
+  private void changeRole(SquadronAssignment assignment, SquadronRole role) {
+    if (assignment.getRole() == role) {
+      log.debug(
+          "userId={} already holds role={} at squadronId={}",
+          assignment.getUserId(),
+          role,
+          assignment.getSquadronId());
+      return;
+    }
+
+    assignment.setRole(role);
+    repository.saveAndFlush(assignment);
+    log.debug("Squadron assignment with id={} role changed to={}", assignment.getId(), role);
   }
 
   private SquadronAssignmentDto toDto(SquadronAssignment assignment) {

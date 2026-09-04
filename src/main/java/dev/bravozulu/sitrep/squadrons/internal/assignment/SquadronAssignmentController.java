@@ -23,17 +23,33 @@ public class SquadronAssignmentController {
   }
 
   @PostMapping("/{squadronId}/assignments")
-  public ResponseEntity<Void> createSquadronAssignment(
+  public ResponseEntity<Void> assignSquadron(
       @PathVariable UUID squadronId, @RequestBody @Valid SquadronAssignmentCreateRequest request) {
-    service.createSquadronAssignment(squadronId, request);
+    service.assignSquadron(squadronId, request);
     return ResponseEntity.created(URI.create("/api/v1/squadrons/" + squadronId + "/assignments"))
         .build();
+  }
+
+  @PutMapping("/{squadronId}/assignments/transfer")
+  public ResponseEntity<Void> transferSquadron(
+      @PathVariable UUID squadronId, @RequestBody @Valid SquadronAssignmentCreateRequest request) {
+    service.transferSquadronAssignment(squadronId, request);
+    return ResponseEntity.noContent().build();
   }
 
   @PutMapping("/{squadronId}/assignments/{userId}/revoke")
   public ResponseEntity<Void> revokeSquadronAssignment(
       @PathVariable UUID squadronId, @PathVariable UUID userId) {
     service.revokeSquadronAssignment(squadronId, userId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PutMapping("/{squadronId}/assignments/{userId}/role")
+  public ResponseEntity<Void> changeSquadronRole(
+      @PathVariable UUID squadronId,
+      @PathVariable UUID userId,
+      @RequestBody @Valid SquadronAssignmentRoleChangeRequest request) {
+    service.changeSquadronRole(squadronId, userId, request.role());
     return ResponseEntity.noContent().build();
   }
 }
