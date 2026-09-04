@@ -1,13 +1,12 @@
 package dev.bravozulu.sitrep.unit.squadrons.assignment;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
-import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignment;
@@ -24,7 +23,6 @@ import dev.bravozulu.sitrep.users.internal.UserRepository;
 import dev.bravozulu.sitrep.users.internal.UserService;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -53,27 +51,57 @@ class SquadronAssignmentServiceTest {
   }
 
   @Nested
-  class GetCurrentSquadronAssignmentsBySquadronId {
+  class IsUserPrimarySquadron {
     @Test
-    void getBySquadronId_returnsDtoList() {
-      UUID squadronId = UUID.randomUUID();
-      UUID userId1 = UUID.randomUUID();
-      UUID userId2 = UUID.randomUUID();
+    void isUserPrimarySquadron_matchesCurrentAssignment_returnsTrue() {
+      UUID userId = UUID.randomUUID();
+      UUID squadronId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+      UUID sameValueDifferentInstance = UUID.fromString(squadronId.toString());
 
+      SquadronAssignment assignment =
+          new SquadronAssignment(sameValueDifferentInstance, userId, SquadronRole.STUDENT);
+      when(repository.findByUserIdAndRevokedAtIsNull(userId)).thenReturn(Optional.of(assignment));
+
+      assertThat(service.isUserPrimarySquadron(squadronId, userId)).isTrue();
+    }
+
+    @Test
+    void isUserPrimarySquadron_differentSquadron_returnsFalse() {
+      UUID userId = UUID.randomUUID();
+      SquadronAssignment assignment =
+          new SquadronAssignment(UUID.randomUUID(), userId, SquadronRole.STUDENT);
+      when(repository.findByUserIdAndRevokedAtIsNull(userId)).thenReturn(Optional.of(assignment));
+
+      assertThat(service.isUserPrimarySquadron(UUID.randomUUID(), userId)).isFalse();
+    }
+
+    @Test
+    void isUserPrimarySquadron_noAssignment_returnsFalse() {
+      UUID userId = UUID.randomUUID();
+      when(repository.findByUserIdAndRevokedAtIsNull(userId)).thenReturn(Optional.empty());
+
+      assertThat(service.isUserPrimarySquadron(UUID.randomUUID(), userId)).isFalse();
+    }
+  }
+
+  @Nested
+  class GetSquadronAssignmentsBySquadronId {
+    @Test
+    void getBySquadronId_returnsAssignments() {
+      UUID squadronId = UUID.randomUUID();
       SquadronAssignment assignment1 =
-          new SquadronAssignment(userId1, squadronId, SquadronRole.INSTRUCTOR);
+          new SquadronAssignment(squadronId, UUID.randomUUID(), SquadronRole.INSTRUCTOR);
+      ReflectionTestUtils.setField(assignment1, "id", UUID.randomUUID());
       SquadronAssignment assignment2 =
-          new SquadronAssignment(userId2, squadronId, SquadronRole.STUDENT);
+          new SquadronAssignment(squadronId, UUID.randomUUID(), SquadronRole.STUDENT);
+      ReflectionTestUtils.setField(assignment2, "id", UUID.randomUUID());
 
       when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId))
           .thenReturn(List.of(assignment1, assignment2));
 
-      List<SquadronAssignmentDto> result =
-          service.getSquadronAssignmentsBySquadronId(squadronId);
+      List<SquadronAssignment> result = service.getSquadronAssignmentsBySquadronId(squadronId);
 
-      assertThat(result.size()).isEqualTo(2);
-      assertThat(result.get(0).userId()).isEqualTo(userId1);
-      assertThat(result.get(1).userId()).isEqualTo(userId2);
+      assertThat(result).containsExactly(assignment1, assignment2);
     }
 
     @Test
@@ -81,39 +109,32 @@ class SquadronAssignmentServiceTest {
       UUID squadronId = UUID.randomUUID();
       when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of());
 
-      List<SquadronAssignmentDto> result =
-          service.getSquadronAssignmentsBySquadronId(squadronId);
-
-      assertThat(result.isEmpty()).isTrue();
+      assertThat(service.getSquadronAssignmentsBySquadronId(squadronId)).isEmpty();
     }
   }
 
   @Nested
   class GetSquadronAssignmentByUserId {
     @Test
-    void getByUserId_returnsDto() {
-      UUID id = UUID.randomUUID();
+    void getByUserId_returnsAssignment() {
       UUID userId = UUID.randomUUID();
       UUID squadronId = UUID.randomUUID();
-
       SquadronAssignment assignment =
-          new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
-      ReflectionTestUtils.setField(assignment, "id", id);
+          new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR);
 
       when(repository.findByUserIdAndRevokedAtIsNull(userId)).thenReturn(Optional.of(assignment));
 
-      SquadronAssignmentDto result = service.getSquadronAssignmentByUserId(userId);
+      SquadronAssignment result = service.getSquadronAssignmentByUserId(userId);
 
-      assertThat(result.id()).isEqualTo(id);
-      assertThat(result.userId()).isEqualTo(userId);
-      assertThat(result.primarySquadronId()).isEqualTo(squadronId);
-      assertThat(result.role()).isEqualTo(SquadronRole.INSTRUCTOR);
-      assertThat(result.guestSquadronIds()).isEqualTo(Set.of());
+      assertThat(result.getUserId()).isEqualTo(userId);
+      assertThat(result.getSquadronId()).isEqualTo(squadronId);
+      assertThat(result.getRole()).isEqualTo(SquadronRole.INSTRUCTOR);
     }
 
     @Test
     void getByUserId_notFound_throwsNotFoundException() {
       when(repository.findByUserIdAndRevokedAtIsNull(any())).thenReturn(Optional.empty());
+
       assertThatThrownBy(() -> service.getSquadronAssignmentByUserId(UUID.randomUUID()))
           .isInstanceOf(SquadronAssignmentNotFoundException.class);
     }
@@ -128,12 +149,13 @@ class SquadronAssignmentServiceTest {
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
 
       SquadronAssignment saved =
-          new SquadronAssignment(request.userId(), squadronId, request.role());
+          new SquadronAssignment(squadronId, request.userId(), request.role());
       ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
       when(userRepository.existsById(request.userId())).thenReturn(true);
-      when(repository.findByUserIdAndRevokedAtIsNull(request.userId())).thenReturn(Optional.empty());
+      when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
+          .thenReturn(Optional.empty());
       when(repository.save(any())).thenReturn(saved);
 
       service.createSquadronAssignment(squadronId, request);
@@ -176,11 +198,11 @@ class SquadronAssignmentServiceTest {
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
 
       SquadronAssignment existing =
-          new SquadronAssignment(request.userId(), UUID.randomUUID(), SquadronRole.INSTRUCTOR);
+          new SquadronAssignment(UUID.randomUUID(), request.userId(), SquadronRole.INSTRUCTOR);
       ReflectionTestUtils.setField(existing, "id", UUID.randomUUID());
 
       SquadronAssignment saved =
-          new SquadronAssignment(request.userId(), squadronId, request.role());
+          new SquadronAssignment(squadronId, request.userId(), request.role());
       ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
@@ -191,7 +213,7 @@ class SquadronAssignmentServiceTest {
 
       service.createSquadronAssignment(squadronId, request);
 
-      assertThat(existing.getRevokedAt()).isNotEmpty();
+      assertThat(existing.getRevokedAt()).isPresent();
       verify(repository).saveAndFlush(existing);
     }
 
@@ -202,11 +224,41 @@ class SquadronAssignmentServiceTest {
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
       when(userRepository.existsById(request.userId())).thenReturn(true);
-      when(repository.findByUserIdAndRevokedAtIsNull(request.userId())).thenReturn(Optional.empty());
+      when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
+          .thenReturn(Optional.empty());
       when(repository.save(any())).thenThrow(new DataIntegrityViolationException(""));
 
       assertThatThrownBy(() -> service.createSquadronAssignment(squadronId, request))
           .isInstanceOf(ConflictException.class);
+    }
+  }
+
+  @Nested
+  class RevokeSquadronAssignment {
+    @Test
+    void revokeSquadronAssignment_found_setsRevokedAt() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+      SquadronAssignment assignment =
+          new SquadronAssignment(squadronId, userId, SquadronRole.STUDENT);
+
+      when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId))
+          .thenReturn(Optional.of(assignment));
+
+      service.revokeSquadronAssignment(squadronId, userId);
+
+      assertThat(assignment.getRevokedAt()).isPresent();
+    }
+
+    @Test
+    void revokeSquadronAssignment_notFound_throwsNotFoundException() {
+      UUID squadronId = UUID.randomUUID();
+      UUID userId = UUID.randomUUID();
+      when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, userId))
+          .thenReturn(Optional.empty());
+
+      assertThatThrownBy(() -> service.revokeSquadronAssignment(squadronId, userId))
+          .isInstanceOf(SquadronAssignmentNotFoundException.class);
     }
   }
 }

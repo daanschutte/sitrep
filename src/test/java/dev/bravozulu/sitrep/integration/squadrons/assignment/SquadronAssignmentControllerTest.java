@@ -1,9 +1,8 @@
 package dev.bravozulu.sitrep.integration.squadrons.assignment;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import dev.bravozulu.sitrep.AbstractIntegrationTests;
@@ -53,66 +52,6 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
   }
 
   @Nested
-  class GetByUserId {
-    @Test
-    void getByUserId_returnsAssignment() throws Exception {
-      SquadronAssignment assignment =
-          new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
-      assignmentRepository.save(assignment);
-
-      mockMvc
-          .perform(get("/api/v1/squadrons/assignments").param("userId", userId.toString()))
-          .andExpect(status().isOk())
-          .andExpect(jsonPath("$.userId").value(userId.toString()))
-          .andExpect(jsonPath("$.primarySquadronId").value(squadronId.toString()))
-          .andExpect(jsonPath("$.role").value("INSTRUCTOR"));
-    }
-
-    @Test
-    void getByUserId_notFound_returnsNotFound() throws Exception {
-      mockMvc
-          .perform(
-              get("/api/v1/squadrons/assignments").param("userId", UUID.randomUUID().toString()))
-          .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getByUserId_missingParam_returnsBadRequest() throws Exception {
-      mockMvc.perform(get("/api/v1/squadrons/assignments")).andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void getByUserId_malformedUuid_returnsBadRequest() throws Exception {
-      mockMvc
-          .perform(get("/api/v1/squadrons/assignments").param("userId", "not-a-uuid"))
-          .andExpect(status().isBadRequest());
-    }
-  }
-
-  @Nested
-  class GetBySquadronId {
-    @Test
-    void getBySquadronId_returnsCurrentAssignments() throws Exception {
-      SquadronAssignment assignment =
-          new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
-      assignmentRepository.save(assignment);
-
-      mockMvc
-          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
-          .andExpect(status().isOk())
-          .andExpect(jsonPath("$[0].userId").value(userId.toString()));
-    }
-
-    @Test
-    void getBySquadronId_noAssignments_returnsEmptyList() throws Exception {
-      mockMvc
-          .perform(get("/api/v1/squadrons/{squadronId}/assignments", squadronId))
-          .andExpect(status().isOk())
-          .andExpect(jsonPath("$").isEmpty());
-    }
-  }
-
-  @Nested
   class CreateSquadronAssignment {
     @Test
     void createSquadronAssignment_creates_returnsCreated() throws Exception {
@@ -137,7 +76,7 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
     @Test
     void createSquadronAssignment_transfersExisting_returnsCreated() throws Exception {
       SquadronAssignment existing =
-          new SquadronAssignment(userId, squadronId, SquadronRole.INSTRUCTOR);
+          new SquadronAssignment(squadronId, userId, SquadronRole.INSTRUCTOR);
       assignmentRepository.save(existing);
 
       UUID newSquadronId = squadronRepository.save(new Squadron("2 Squadron", "2SQN")).getId();
@@ -152,12 +91,10 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
                   .content(body))
           .andExpect(status().isCreated());
 
-      // Verify state: old assignment should be ended
       SquadronAssignment updatedExisting =
           assignmentRepository.findById(existing.getId()).orElseThrow();
       assertThat(updatedExisting.getRevokedAt()).isPresent();
 
-      // Verify state: new assignment should be current
       List<SquadronAssignment> currentAssignments =
           assignmentRepository.findByUserIdAndRevokedAtIsNull(userId).stream().toList();
       assertThat(currentAssignments.size()).isEqualTo(1);
@@ -225,6 +162,35 @@ public class SquadronAssignmentControllerTest extends AbstractIntegrationTests {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(body))
           .andExpect(status().isBadRequest());
+    }
+  }
+
+  @Nested
+  class RevokeSquadronAssignment {
+    @Test
+    void revokeSquadronAssignment_found_returnsNoContent() throws Exception {
+      SquadronAssignment assignment =
+          new SquadronAssignment(squadronId, userId, SquadronRole.STUDENT);
+      assignmentRepository.save(assignment);
+
+      mockMvc
+          .perform(
+              put("/api/v1/squadrons/{squadronId}/assignments/{userId}/revoke", squadronId, userId))
+          .andExpect(status().isNoContent());
+
+      SquadronAssignment updated = assignmentRepository.findById(assignment.getId()).orElseThrow();
+      assertThat(updated.getRevokedAt()).isPresent();
+    }
+
+    @Test
+    void revokeSquadronAssignment_notFound_returnsNotFound() throws Exception {
+      mockMvc
+          .perform(
+              put(
+                  "/api/v1/squadrons/{squadronId}/assignments/{userId}/revoke",
+                  squadronId,
+                  UUID.randomUUID()))
+          .andExpect(status().isNotFound());
     }
   }
 

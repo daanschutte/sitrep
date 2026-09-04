@@ -56,7 +56,7 @@ public class SquadronAssignmentService {
     userQueryService.validateUserExists(request.userId());
 
     SquadronAssignment assignment =
-        new SquadronAssignment(request.userId(), squadronId, request.role());
+        new SquadronAssignment(squadronId, request.userId(), request.role());
 
     // TODO: what if new is the same as existing, should it not be untouched?
     repository

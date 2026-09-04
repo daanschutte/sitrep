@@ -28,9 +28,9 @@ public class SquadronAssignment extends BaseEntity {
 
   protected SquadronAssignment() {}
 
-  public SquadronAssignment(UUID userId, UUID squadronId, SquadronRole role) {
-    this.userId = userId;
+  public SquadronAssignment(UUID squadronId, UUID userId, SquadronRole role) {
     this.squadronId = squadronId;
+    this.userId = userId;
     this.role = role;
   }
 

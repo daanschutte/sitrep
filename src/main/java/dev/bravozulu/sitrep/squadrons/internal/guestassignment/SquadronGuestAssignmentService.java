@@ -58,7 +58,7 @@ public class SquadronGuestAssignmentService {
 
       throw new SquadronGuestAssignmentConflictException(
           "Cannot assign userId="
-              + request.userId().toString()
+              + request.userId()
               + " as guest in their primary squadronId="
               + squadronId.toString());
     }
