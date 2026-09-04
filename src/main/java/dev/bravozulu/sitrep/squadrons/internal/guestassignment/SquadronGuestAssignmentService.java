@@ -121,6 +121,6 @@ public class SquadronGuestAssignmentService {
 
   private SquadronGuestAssignmentDto toDto(SquadronGuestAssignment guestAssignment) {
     return new SquadronGuestAssignmentDto(
-        guestAssignment.getUserId(), guestAssignment.getSquadronId(), guestAssignment.getRole());
+            guestAssignment.getSquadronId(), guestAssignment.getUserId(), guestAssignment.getRole());
   }
 }

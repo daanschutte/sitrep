@@ -5,11 +5,11 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import dev.bravozulu.sitrep.squadrons.api.SquadronAccessDto;
+import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.UserSquadronAccessDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronGuestAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.internal.access.SquadronAccessServiceImpl;
-import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignment;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentNotFoundException;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignmentService;
 import dev.bravozulu.sitrep.squadrons.internal.guestassignment.SquadronGuestAssignmentService;
@@ -41,8 +41,8 @@ class SquadronAccessServiceImplTest {
     void getByUserId_composesPrimaryAndGuestAccess() {
       UUID userId = UUID.randomUUID();
       UUID primarySquadronId = UUID.randomUUID();
-      SquadronAssignment primary =
-          new SquadronAssignment(primarySquadronId, userId, SquadronRole.INSTRUCTOR);
+      SquadronAssignmentDto primary =
+          new SquadronAssignmentDto(primarySquadronId, userId, SquadronRole.INSTRUCTOR);
 
       SquadronGuestAssignmentDto guestDto =
           new SquadronGuestAssignmentDto(UUID.randomUUID(), UUID.randomUUID(), SquadronRole.OPS);
@@ -56,18 +56,19 @@ class SquadronAccessServiceImplTest {
       assertThat(result)
           .isEqualTo(
               new UserSquadronAccessDto(
-                  userId, primarySquadronId, SquadronRole.INSTRUCTOR, List.of(guestDto)));
+                      primarySquadronId, userId, SquadronRole.INSTRUCTOR, List.of(guestDto)));
     }
 
     @Test
     void getByUserId_noGuestAccess_returnsEmptyGuestList() {
       UUID userId = UUID.randomUUID();
       UUID primarySquadronId = UUID.randomUUID();
-      SquadronAssignment primary =
-          new SquadronAssignment(primarySquadronId, userId, SquadronRole.STUDENT);
+      SquadronAssignmentDto primary =
+          new SquadronAssignmentDto(userId, primarySquadronId, SquadronRole.STUDENT);
 
       when(squadronAssignmentService.getSquadronAssignmentByUserId(userId)).thenReturn(primary);
-      when(squadronGuestAssignmentService.getSquadronGuestAssignmentsByUserId(userId)).thenReturn(List.of());
+      when(squadronGuestAssignmentService.getSquadronGuestAssignmentsByUserId(userId))
+          .thenReturn(List.of());
 
       UserSquadronAccessDto result = service.getSquadronAccessByUserId(userId);
 
@@ -93,10 +94,10 @@ class SquadronAccessServiceImplTest {
       UUID primaryUserId = UUID.randomUUID();
       UUID guestUserId = UUID.randomUUID();
 
-      SquadronAssignment primaryAssignment =
-          new SquadronAssignment(squadronId, primaryUserId, SquadronRole.INSTRUCTOR);
+      SquadronAssignmentDto primaryAssignment =
+          new SquadronAssignmentDto(squadronId, primaryUserId, SquadronRole.INSTRUCTOR);
       SquadronGuestAssignmentDto guestAssignment =
-          new SquadronGuestAssignmentDto(guestUserId, squadronId, SquadronRole.OPS);
+          new SquadronGuestAssignmentDto(squadronId, guestUserId, SquadronRole.OPS);
 
       when(squadronAssignmentService.getSquadronAssignmentsBySquadronId(squadronId))
           .thenReturn(List.of(primaryAssignment));
@@ -107,8 +108,8 @@ class SquadronAccessServiceImplTest {
 
       assertThat(result)
           .containsExactlyInAnyOrder(
-              new SquadronAccessDto(primaryUserId, squadronId, SquadronRole.INSTRUCTOR),
-              new SquadronAccessDto(guestUserId, squadronId, SquadronRole.OPS));
+              new SquadronAccessDto(squadronId, primaryUserId, SquadronRole.INSTRUCTOR),
+              new SquadronAccessDto(squadronId, guestUserId, SquadronRole.OPS, true));
     }
 
     @Test

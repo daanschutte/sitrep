@@ -88,7 +88,7 @@ class SquadronGuestAssignmentServiceTest {
       List<SquadronGuestAssignmentDto> result = service.getSquadronGuestAssignmentsByUserId(userId);
 
       assertThat(result)
-          .containsExactly(new SquadronGuestAssignmentDto(userId, squadronId, SquadronRole.OPS));
+          .containsExactly(new SquadronGuestAssignmentDto(squadronId, userId, SquadronRole.OPS));
     }
 
     @Test
@@ -106,7 +106,7 @@ class SquadronGuestAssignmentServiceTest {
     void getSquadronGuestAssignmentsBySquadronId_delegatesToRepository() {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentDto dto =
-          new SquadronGuestAssignmentDto(UUID.randomUUID(), squadronId, SquadronRole.OPS);
+          new SquadronGuestAssignmentDto(squadronId, UUID.randomUUID(), SquadronRole.OPS);
       when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId)).thenReturn(List.of(dto));
 
       assertThat(service.getSquadronGuestAssignmentsBySquadronId(squadronId))

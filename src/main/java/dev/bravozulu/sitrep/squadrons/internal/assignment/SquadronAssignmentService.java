@@ -1,6 +1,7 @@
 package dev.bravozulu.sitrep.squadrons.internal.assignment;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
+import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
 import java.time.Instant;
@@ -37,13 +38,16 @@ public class SquadronAssignmentService {
         .isPresent();
   }
 
-  public List<SquadronAssignment> getSquadronAssignmentsBySquadronId(UUID squadronId) {
-    return repository.findBySquadronIdAndRevokedAtIsNull(squadronId);
+  public List<SquadronAssignmentDto> getSquadronAssignmentsBySquadronId(UUID squadronId) {
+    return repository.findBySquadronIdAndRevokedAtIsNull(squadronId).stream()
+        .map(this::toDto)
+        .toList();
   }
 
-  public SquadronAssignment getSquadronAssignmentByUserId(UUID userId) {
+  public SquadronAssignmentDto getSquadronAssignmentByUserId(UUID userId) {
     return repository
         .findByUserIdAndRevokedAtIsNull(userId)
+        .map(this::toDto)
         .orElseThrow(
             () ->
                 new SquadronAssignmentNotFoundException(
@@ -103,5 +107,10 @@ public class SquadronAssignmentService {
                             + " not found"));
 
     assignment.revokeAssignment(Instant.now());
+  }
+
+  private SquadronAssignmentDto toDto(SquadronAssignment assignment) {
+    return new SquadronAssignmentDto(
+            assignment.getSquadronId(), assignment.getUserId(), assignment.getRole());
   }
 }

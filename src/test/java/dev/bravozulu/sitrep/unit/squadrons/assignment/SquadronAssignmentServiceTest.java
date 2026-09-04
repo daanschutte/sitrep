@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
+import dev.bravozulu.sitrep.squadrons.api.SquadronAssignmentDto;
 import dev.bravozulu.sitrep.squadrons.api.SquadronQueryService;
 import dev.bravozulu.sitrep.squadrons.api.SquadronRole;
 import dev.bravozulu.sitrep.squadrons.internal.assignment.SquadronAssignment;
@@ -94,14 +95,23 @@ class SquadronAssignmentServiceTest {
       ReflectionTestUtils.setField(assignment1, "id", UUID.randomUUID());
       SquadronAssignment assignment2 =
           new SquadronAssignment(squadronId, UUID.randomUUID(), SquadronRole.STUDENT);
-      ReflectionTestUtils.setField(assignment2, "id", UUID.randomUUID());
 
+      ReflectionTestUtils.setField(assignment2, "id", UUID.randomUUID());
       when(repository.findBySquadronIdAndRevokedAtIsNull(squadronId))
           .thenReturn(List.of(assignment1, assignment2));
 
-      List<SquadronAssignment> result = service.getSquadronAssignmentsBySquadronId(squadronId);
+      SquadronAssignmentDto assignment1Dto =
+          new SquadronAssignmentDto(
+                  assignment1.getSquadronId(), assignment1.getUserId(), assignment1.getRole());
+      ReflectionTestUtils.setField(assignment1, "id", UUID.randomUUID());
+      SquadronAssignmentDto assignment2Dto =
+          new SquadronAssignmentDto(
+                  assignment2.getSquadronId(), assignment2.getUserId(), assignment2.getRole());
+      ReflectionTestUtils.setField(assignment2, "id", UUID.randomUUID());
 
-      assertThat(result).containsExactly(assignment1, assignment2);
+      List<SquadronAssignmentDto> result = service.getSquadronAssignmentsBySquadronId(squadronId);
+
+      assertThat(result).containsExactly(assignment1Dto, assignment2Dto);
     }
 
     @Test
@@ -124,11 +134,11 @@ class SquadronAssignmentServiceTest {
 
       when(repository.findByUserIdAndRevokedAtIsNull(userId)).thenReturn(Optional.of(assignment));
 
-      SquadronAssignment result = service.getSquadronAssignmentByUserId(userId);
+      SquadronAssignmentDto result = service.getSquadronAssignmentByUserId(userId);
 
-      assertThat(result.getUserId()).isEqualTo(userId);
-      assertThat(result.getSquadronId()).isEqualTo(squadronId);
-      assertThat(result.getRole()).isEqualTo(SquadronRole.INSTRUCTOR);
+      assertThat(result.userId()).isEqualTo(userId);
+      assertThat(result.squadronId()).isEqualTo(squadronId);
+      assertThat(result.role()).isEqualTo(SquadronRole.INSTRUCTOR);
     }
 
     @Test
