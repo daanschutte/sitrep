@@ -8,3 +8,5 @@ CREATE TABLE squadron
     created_at TIMESTAMPTZ         NOT NULL,
     updated_at TIMESTAMPTZ         NOT NULL
 );
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON squadron TO app_user;

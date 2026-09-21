@@ -9,3 +9,5 @@ CREATE TABLE users
     created_at TIMESTAMPTZ  NOT NULL,
     updated_at TIMESTAMPTZ  NOT NULL
 );
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON users TO app_user;

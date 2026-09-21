@@ -27,3 +27,5 @@ CREATE TABLE squadron_guest_assignment
 
 CREATE UNIQUE INDEX idx_user_current_squadron_guest_assignment
     ON squadron_guest_assignment (user_id, squadron_id) WHERE revoked_at IS NULL;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON squadron_assignment, squadron_guest_assignment TO app_user;

@@ -1,0 +1,17 @@
+target/
+.git/
+.idea/
+.vscode/
+.junie/
+.claude/
+http/
+docs/
+*.md
+
+.env
+.env.*
+!.env.example
+
+compose.yaml
+.github/
+mvnw.cmd
