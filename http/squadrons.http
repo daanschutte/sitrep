@@ -1,0 +1,22 @@
+### Create squadron
+# @name createSquadron
+POST {{baseUrl}}/squadrons
+Content-Type: application/json
+
+{
+  "name": "17 Squadron",
+  "shortName": "17SQN"
+}
+
+> {%
+    client.global.set("squadronId", response.headers.valueOf("Location").split("/").pop());
+%}
+
+### Get squadron by id
+GET {{baseUrl}}/squadrons/{{squadronId}}
+
+### Enable squadron
+PUT {{baseUrl}}/squadrons/{{squadronId}}/enable
+
+### Disable squadron
+PUT {{baseUrl}}/squadrons/{{squadronId}}/disable

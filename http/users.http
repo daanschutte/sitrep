@@ -1,0 +1,18 @@
+### Create user
+# @name createUser
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "email": "jane.doe@example.com",
+  "rank": "CAPTAIN"
+}
+
+> {%
+    client.global.set("userId", response.headers.valueOf("Location").split("/").pop());
+%}
+
+### Get user by id
+GET {{baseUrl}}/users/{{userId}}

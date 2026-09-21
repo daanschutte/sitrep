@@ -1,0 +1,5 @@
+### Get a user's composed squadron access (primary + guest assignments)
+GET {{baseUrl}}/squadrons/access?userId={{userId}}
+
+### Get a squadron's composed access (primary + guest members)
+GET {{baseUrl}}/squadrons/{{squadronId}}/access

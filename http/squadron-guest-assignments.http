@@ -1,0 +1,19 @@
+### Assign a user guest access to a squadron
+POST {{baseUrl}}/squadrons/{{squadronId}}/guest-assignments
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "role": "OPS"
+}
+
+### Change a user's role within their guest assignment
+PUT {{baseUrl}}/squadrons/{{squadronId}}/guest-assignments/{{userId}}/role
+Content-Type: application/json
+
+{
+  "role": "BASIC"
+}
+
+### Revoke a user's guest assignment
+PUT {{baseUrl}}/squadrons/{{squadronId}}/guest-assignments/{{userId}}/revoke

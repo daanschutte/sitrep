@@ -1,0 +1,28 @@
+### Assign a user to a squadron (primary assignment)
+POST {{baseUrl}}/squadrons/{{squadronId}}/assignments
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "role": "STUDENT"
+}
+
+### Transfer a user's primary assignment to this squadron
+PUT {{baseUrl}}/squadrons/{{squadronId}}/assignments/transfer
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "role": "STUDENT"
+}
+
+### Change a user's role within their primary squadron assignment
+PUT {{baseUrl}}/squadrons/{{squadronId}}/assignments/{{userId}}/role
+Content-Type: application/json
+
+{
+  "role": "INSTRUCTOR"
+}
+
+### Revoke a user's primary assignment
+PUT {{baseUrl}}/squadrons/{{squadronId}}/assignments/{{userId}}/revoke
