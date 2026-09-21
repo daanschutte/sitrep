@@ -25,7 +25,7 @@ Companion to the Functional Design. This document covers the **technical** appro
 | Logging | SLF4J + Logback + `logstash-logback-encoder` | JSON to stdout. |
 | Tracing | Micrometer Tracing + Brave (or OpenTelemetry bridge) | Provides traceId/spanId in logs and metrics. |
 | Observability | Spring Boot Actuator + Micrometer | `/actuator/health`, `/actuator/metrics`. Prometheus-compatible. |
-| Container | Docker, multi-stage build with `bellsoft/liberica-openjre-debian:25-cds` | Spring Boot-aligned base image. CDS pre-built; AOT cache Dockerfile variant for fast startup. |
+| Container | Docker, multi-stage build with `bellsoft/liberica-openjre-debian:25-cds` | Spring Boot-aligned base image. Final stage runs a training pass (`-XX:AOTCacheOutput`, `-Dspring.context.exit=onRefresh`) to build an AOT cache, then boots with `-XX:AOTCache` for fast startup. |
 | Local orchestration | Docker Compose | App + Postgres. |
 | Object storage abstraction | `BlobStore` interface, filesystem + S3-compatible impls | Added when first needed (PDF printing). Filesystem impl is the default for air-gapped. For the cloud demo, the S3-compatible impl talks to either real AWS S3 or an on-prem **MinIO** server (open-source S3-compatible object store that runs as a container — same SDK, same API, swap by config). |
 
@@ -45,7 +45,7 @@ Each module is a top-level package under `dev.bravozulu.sitrep.<module>`. Spring
 | Module | Responsibility | Key entities | Depends on |
 |---|---|---|---|
 | `users` | User identity, qualifications, availability, activation lifecycle. Not tenant-scoped — users transfer between squadrons. | `User`, `Qualification`, `Availability` | — |
-| `squadrons` | Squadron definitions, current squadron assignment for users (including role), cross-squadron access grants. | `Squadron`, `SquadronAssignment`, `CrossSquadronGrant` | `users` |
+| `squadrons` | Squadron definitions, current squadron assignment for users (including role), cross-squadron guest access grants. | `Squadron`, `SquadronAssignment`, `SquadronGuestAssignment` | `users` |
 | `auth` | Login, JWT issuance, refresh token management, password hashing. Provides `currentUser()` / `currentTenantContext()` to other modules. | `RefreshToken` | `users`, `squadrons` |
 | `platforms` | Aircraft, simulators, rooms. Platform types with authorization profiles. | `Platform`, `PlatformType`, `AuthorizationProfile`, `Tail` | `squadrons` |
 | `courses` | Course definitions, syllabus structure, student enrolment, syllabus board projection. | `Course`, `SyllabusEvent`, `Enrolment`, `SyllabusProgress` | `users`, `squadrons` |
@@ -334,7 +334,17 @@ This is a placeholder so we can demonstrate RLS works. Real `platforms` module g
 | `POST` | `/api/v1/users` | bearer + ADMIN | Create user (no squadron — assigned separately, matches functional design §4) |
 | `POST` | `/api/v1/users/{id}/deactivate` | bearer + ADMIN | Deactivate user |
 | `POST` | `/api/v1/squadrons` | bearer + ADMIN | Create squadron |
-| `POST` | `/api/v1/squadrons/{id}/assignments` | bearer + ADMIN | Assign user to squadron with role; sets `is_current=true` and ends any prior current assignment in one transaction |
+| `PUT` | `/api/v1/squadrons/{id}/enable` | bearer + ADMIN | Enable squadron |
+| `PUT` | `/api/v1/squadrons/{id}/disable` | bearer + ADMIN | Disable squadron |
+| `POST` | `/api/v1/squadrons/{id}/assignments` | bearer + ADMIN | Assign user to squadron with role; ends any prior current assignment (and any overlapping guest access) in one transaction |
+| `PUT` | `/api/v1/squadrons/{id}/assignments/transfer` | bearer + ADMIN | Transfer a user's primary assignment to this squadron with a role |
+| `PUT` | `/api/v1/squadrons/{id}/assignments/{userId}/role` | bearer + ADMIN | Change a user's role within their primary assignment |
+| `PUT` | `/api/v1/squadrons/{id}/assignments/{userId}/revoke` | bearer + ADMIN | Revoke a user's primary assignment |
+| `POST` | `/api/v1/squadrons/{id}/guest-assignments` | bearer + ADMIN | Grant a user guest access to this squadron with a role |
+| `PUT` | `/api/v1/squadrons/{id}/guest-assignments/{userId}/role` | bearer + ADMIN | Change a user's role within their guest assignment |
+| `PUT` | `/api/v1/squadrons/{id}/guest-assignments/{userId}/revoke` | bearer + ADMIN | Revoke a user's guest assignment |
+| `GET` | `/api/v1/squadrons/access?userId=` | bearer | A user's composed access: primary assignment + all guest assignments |
+| `GET` | `/api/v1/squadrons/{id}/access` | bearer | A squadron's composed membership: primary + guest members |
 | `POST` | `/api/v1/rooms` | bearer + PLANNER | Create a room (tenant-scoped — RLS demo) |
 | `GET` | `/api/v1/rooms` | bearer | List rooms visible to current tenant context |
 

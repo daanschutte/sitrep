@@ -33,6 +33,10 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 
 Health: http://localhost:8080/actuator/health
 
+## Trying the API
+
+The [`http/`](http/) directory has `.http` request files (IntelliJ HTTP Client format) for every endpoint, grouped by resource — open one, select the `dev` environment, and run requests directly from the IDE. `createUser`/`createSquadron` capture the created id so later requests in other files can chain off them.
+
 ## IntelliJ run configuration
 
 To run the app from IntelliJ with the `dev` profile:

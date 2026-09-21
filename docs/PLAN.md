@@ -16,14 +16,13 @@ All implementation code is written by the developer. Claude's role is design rev
 
 ## Where We Are (September 2026)
 
-Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module in progress (`Squadron`, `SquadronAssignment`, `SquadronGuestAssignment` entities, CRUD + enable/disable + assignment endpoints, migrations V01–V04, `SquadronQueryService` and `UserQueryService` cross-module interfaces wired). `SquadronGuestAssignment` still needs its repository/service/controller.
+Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module done: `Squadron`, `SquadronAssignment`, `SquadronGuestAssignment` entities; primary-assignment writes (assign/transfer/changeRole/revoke) and guest-assignment writes (assign/changeRole/revoke) each behind their own controller; a `SquadronAccessCoordinator` composes primary + guest access into read-only `GET /squadrons/access` and `GET /squadrons/{id}/access` endpoints; an ArchUnit rule enforces `internal.assignment` never depends on `internal.guestassignment`; `SquadronQueryService` and `UserQueryService` cross-module interfaces wired.
 
 **Current priority order** (chosen for hiring-signal impact — these are the most differentiated pieces of the system, not generic CRUD):
-1. Finish `SquadronGuestAssignment` (close out `squadrons`)
-2. `auth` — JWT + refresh token flow
-3. `outbox` — hand-rolled dispatch loops
-4. `audit` — hash-chained ledger
-5. RLS proof via the `rooms` stub endpoint
+1. `auth` — JWT + refresh token flow
+2. `outbox` — hand-rolled dispatch loops
+3. `audit` — hash-chained ledger
+4. RLS proof via the `rooms` stub endpoint
 
 Platforms/courses/scheduling (Phases 2–4) are deferred until Phase 1 is fully complete. First frontend slice: a login screen wired to the real JWT/refresh-cookie flow, once `auth` lands.
 
@@ -106,7 +105,8 @@ Each phase ends with: green CI, `./mvnw verify` clean, updated OpenAPI checked i
 - Architecture tests — `InjectionRulesTests`, `IORulesTests`, `LocationRulesTests` ✓
 - `README.md` + `CONTRIBUTING.md` ✓
 - `BaseEntity.equals()` — fixed to use `instanceof` pattern matching ✓
-- `Dockerfile` — multi-stage, Maven build inside Docker, `bellsoft/liberica-openjre-debian:25-cds`, non-root ✓
+- `Dockerfile` — multi-stage, Maven build inside Docker, `bellsoft/liberica-openjre-debian:25-cds`, non-root, AOT cache training run (`-XX:AOTCacheOutput`/`-XX:AOTCache`) ✓
+- `.dockerignore` — keeps build context small and IDE/docs/secrets out of image builds ✓
 
 **Complete.** ✓
 
@@ -120,7 +120,7 @@ Each phase ends with: green CI, `./mvnw verify` clean, updated OpenAPI checked i
 
 **Goal:** authenticated requests, multi-tenancy proven via rooms RLS demo, hash-chained audit trail, outbox dispatching.
 
-**Domain:** `User`, `Squadron`, `SquadronAssignment`, `CrossSquadronGrant`, `RefreshToken`, `AuditEntry`, `OutboxMessage`, `Room` (RLS stub)
+**Domain:** `User`, `Squadron`, `SquadronAssignment`, `SquadronGuestAssignment`, `RefreshToken`, `AuditEntry`, `OutboxMessage`, `Room` (RLS stub)
 
 **Endpoints:** per spec §B.3
 
