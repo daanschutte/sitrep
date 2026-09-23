@@ -19,12 +19,27 @@ All implementation code is written by the developer. Claude's role is design rev
 Phase 0 is complete. Phase 1 is in progress — `users` module done, `squadrons` module done: `Squadron`, `SquadronAssignment`, `SquadronGuestAssignment` entities; primary-assignment writes (assign/transfer/changeRole/revoke) and guest-assignment writes (assign/changeRole/revoke) each behind their own controller; a `SquadronAccessCoordinator` composes primary + guest access into read-only `GET /squadrons/access` and `GET /squadrons/{id}/access` endpoints; an ArchUnit rule enforces `internal.assignment` never depends on `internal.guestassignment`; `SquadronQueryService` and `UserQueryService` cross-module interfaces wired.
 
 **Current priority order** (chosen for hiring-signal impact — these are the most differentiated pieces of the system, not generic CRUD):
-1. `auth` — JWT + refresh token flow
+1. `auth` — JWT + refresh token flow (**design decided, not yet implemented** — see below)
 2. `outbox` — hand-rolled dispatch loops
 3. `audit` — hash-chained ledger
 4. RLS proof via the `rooms` stub endpoint
 
 Platforms/courses/scheduling (Phases 2–4) are deferred until Phase 1 is fully complete. First frontend slice: a login screen wired to the real JWT/refresh-cookie flow, once `auth` lands.
+
+### `auth` module — design decided (2026-09-23), implementation not started
+
+Full rationale and endpoint/entity detail is in `SitRep_Spec.md` §A.4.5 and §B.2/B.3 — this is the session-continuity summary.
+
+- **Credential vs. identity split**: `User` (in `users`) stays identity-only — no password field. `auth.internal.credential` owns `Credential` (`userId`, `passwordHash`, `role: USER|ADMIN`) and `ActivationToken` (`userId`, `tokenHash`, `expiresAt`, `consumedAt`). Reasoning: `auth` already owns "prove who you are"; keeping the hash off `User` avoids `users` carrying an auth concern it doesn't otherwise need, and matches the FK-by-UUID (no JPA relationship) pattern already used between `squadrons` and `users`.
+- **Email stays single-sourced in `users`**: `auth` resolves `email → userId` via a new `UserQueryService.findUserIdByEmail(String email)` method, rather than duplicating email onto `Credential`.
+- **Account creation is two separate calls, not one transaction**: `POST /users` (exists) creates the user with no credential — same precedent as "user exists with no squadron yet." An admin then issues an activation token; no cross-module transaction is needed because there's no invariant broken by the gap (unlike e.g. a financial transfer). `auth → users` is the only allowed dependency direction, so a single atomic call would have to live awkwardly inside `auth` anyway.
+- **Activation-token flow stands in for account-takeover protection**: since there's no email server yet, the admin-issue endpoint returns the raw token directly in the response (documented as a stand-in for the eventual email step). The token is hashed at rest like `RefreshToken`, single-use (`consumedAt`), and time-boxed — this is the real security control, not just a UX nicety, because a bare `userId` alone isn't proof of identity.
+- **Package layout**: two sub-packages under `auth/internal` — `credential` (password + activation token together, one concept) and `session` (or `login`) owning `RefreshToken`, `LoginController` (`/auth/login`, `/auth/refresh`, `/auth/logout`), JWT issuance via `NimbusJwtEncoder`, and `CurrentUserImpl` (implements `shared.security.CurrentUser` — no `auth/api` package needed, `CurrentUser` in `shared` is the cross-module seam).
+- **System role is intentionally narrow**: just `USER` / `ADMIN` on `Credential`, distinct from `SquadronRole` (assignment-scoped, e.g. `PLANNER`/`INSTRUCTOR`). The squadron-level role is what actually filters access within a squadron; the system role only gates squadron/user-management-type actions.
+- **⚠️ Spec inconsistency to reconcile later**: `SitRep_Spec.md` §B.3's endpoint table still gates some endpoints with `bearer + PLANNER`, which doesn't fit a `USER`/`ADMIN` model. Once those endpoints are actually built, replace that gate with a `SquadronRole` check instead of a system role. Not fixed now — flagged so it isn't missed.
+- **JWT signing key**: shared secret via env var for now, `// TODO` toward real secrets management later (matches how DB credentials are handled via `.env.example`).
+- **TTLs**: access token 15m and refresh 30d were already locked; activation-token TTL (24–72h range, industry-standard for invite-style tokens vs. much shorter password-reset windows) is now also configurable in `application.yml` — exact number still to be picked.
+- **`SecurityConfig` gets flipped in the same body of work**, not deferred: real `JwtDecoder` bean, `authorizeHttpRequests` matchers (public: `/auth/login`, `/auth/credentials`, `/actuator/health`; `hasRole(...)` per the spec's `bearer + ADMIN` endpoints; `authenticated()` otherwise), and a custom `JwtAuthenticationConverter` mapping the `role` claim to `GrantedAuthority` (Spring's default converter assumes a `scope`/`SCOPE_` claim shape, not this project's). Leaving `permitAll()` in place after `auth` lands would mean login/refresh works but nothing enforces it — treated as a half-finished state, not a smaller PR.
 
 ---
 
