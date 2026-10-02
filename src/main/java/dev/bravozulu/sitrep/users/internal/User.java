@@ -39,7 +39,7 @@ public class User extends BaseEntity {
     return rank;
   }
 
-  public Boolean isActive() {
+  public boolean isActive() {
     return isActive;
   }
 
