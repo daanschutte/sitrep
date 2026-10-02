@@ -6,7 +6,7 @@ CREATE TABLE users
     email      VARCHAR(150) NOT NULL UNIQUE,
     rank       VARCHAR(16)  NOT NULL,
     version    BIGINT,
-    is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+    is_active  BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ  NOT NULL,
     updated_at TIMESTAMPTZ  NOT NULL
 );
