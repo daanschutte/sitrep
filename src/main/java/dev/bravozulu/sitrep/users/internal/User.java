@@ -44,6 +44,6 @@ public class User extends BaseEntity {
   }
 
   public void deactivate() {
-      this.isActive = false;
+    this.isActive = false;
   }
 }

@@ -4,7 +4,6 @@ import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
 import dev.bravozulu.sitrep.users.api.UserDto;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
 import java.util.UUID;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -46,18 +45,15 @@ public class UserService implements UserQueryService {
   }
 
   public void deactivateUser(UUID userId) {
+    validateActiveUserExists(userId);
     repository
         .findById(userId)
-        .ifPresentOrElse(
+        .ifPresent(
             user -> {
               user.deactivate();
               repository.save(user);
               log.debug("User with userId={} deactivated", userId);
-            },
-            () ->
-                log.error(
-                    "Could not deactivate user with userId={}: not a valid user or already deactivated",
-                    userId));
+            });
   }
 
   private static UserDto toDto(User user) {
