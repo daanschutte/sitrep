@@ -2,6 +2,7 @@ package dev.bravozulu.sitrep.unit.users;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -87,7 +88,8 @@ public class UserControllerTest extends AbstractIntegrationTests {
           .andExpect(jsonPath("$.firstName").value(request.firstName()))
           .andExpect(jsonPath("$.lastName").value(request.lastName()))
           .andExpect(jsonPath("$.email").value(request.email()))
-          .andExpect(jsonPath("$.rank").value(request.rank()));
+          .andExpect(jsonPath("$.rank").value(request.rank()))
+          .andExpect(jsonPath("$.isActive").value(true));
     }
 
     @Test
@@ -149,6 +151,39 @@ public class UserControllerTest extends AbstractIntegrationTests {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(objectMapper.writeValueAsString(request)))
           .andExpect(status().isUnprocessableContent());
+    }
+  }
+
+  @Nested
+  class DeactivateUser {
+    @Test
+    void deactivateUser_activeUser_returnsNoContent() throws Exception {
+      mockMvc
+          .perform(put("/api/v1/users/{id}/deactivate", userId))
+          .andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(get("/api/v1/users/{id}", userId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.isActive").value(false));
+    }
+
+    @Test
+    void deactivateUser_unknown_returnsNotFound() throws Exception {
+      mockMvc
+          .perform(put("/api/v1/users/{id}/deactivate", UUID.randomUUID()))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deactivateUser_alreadyDeactivated_returnsConflict() throws Exception {
+      mockMvc
+          .perform(put("/api/v1/users/{id}/deactivate", userId))
+          .andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(put("/api/v1/users/{id}/deactivate", userId))
+          .andExpect(status().isConflict());
     }
   }
 
