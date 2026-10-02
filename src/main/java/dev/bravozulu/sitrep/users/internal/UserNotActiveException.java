@@ -1,5 +1,9 @@
 package dev.bravozulu.sitrep.users.internal;
 
-public class UserNotActiveException extends RuntimeException {
-  public UserNotActiveException() {}
+import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
+
+public class UserNotActiveException extends ConflictException {
+  public UserNotActiveException(String message) {
+    super(message);
+  }
 }

@@ -11,7 +11,7 @@ public class User extends BaseEntity {
   private String lastName;
   private String email;
   private String rank;
-  private Boolean isActive;
+  private Boolean active;
 
   protected User() {}
 
@@ -20,7 +20,7 @@ public class User extends BaseEntity {
     this.lastName = lastName;
     this.email = email;
     this.rank = rank;
-    this.isActive = true;
+    this.active = true;
   }
 
   public String getFirstName() {
@@ -40,10 +40,10 @@ public class User extends BaseEntity {
   }
 
   public Boolean isActive() {
-    return isActive;
+    return active;
   }
 
   public void deactivate() {
-    this.isActive = false;
+    this.active = false;
   }
 }
