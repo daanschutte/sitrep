@@ -21,10 +21,7 @@ public class UserService implements UserQueryService {
 
   @Override
   public void validateActiveUserExists(UUID userId) {
-    User user = repository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
-    if (!user.isActive()) {
-      throw new UserNotActiveException("User with userId=" + userId + " is already deactivated");
-    }
+    getActiveUserById(userId);
   }
 
   public UserDto getById(UUID id) {
@@ -45,14 +42,19 @@ public class UserService implements UserQueryService {
   }
 
   public void deactivateUser(UUID userId) {
-    User user = repository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
-    if (!user.isActive()) {
-      throw new UserNotActiveException("User with userId=" + userId + " is already deactivated");
-    }
+    User user = getActiveUserById(userId);
 
     user.deactivate();
     repository.save(user);
     log.debug("User with userId={} deactivated", userId);
+  }
+
+  private User getActiveUserById(UUID userId) {
+    User user = repository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+    if (!user.isActive()) {
+      throw new UserNotActiveException(userId);
+    }
+    return user;
   }
 
   private static UserDto toDto(User user) {
