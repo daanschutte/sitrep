@@ -4,11 +4,16 @@ import dev.bravozulu.sitrep.shared.exceptions.ConflictException;
 import dev.bravozulu.sitrep.users.api.UserDto;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
 import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserService implements UserQueryService {
+  private static final Logger log = LoggerFactory.getLogger(UserService.class);
+
   private final UserRepository repository;
 
   public UserService(UserRepository repository) {
@@ -16,9 +21,10 @@ public class UserService implements UserQueryService {
   }
 
   @Override
-  public void validateUserExists(UUID userId) {
-    if (!repository.existsById(userId)) {
-      throw new UserNotFoundException(userId);
+  public void validateActiveUserExists(UUID userId) {
+    User user = repository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+    if (!user.isActive()) {
+      throw new UserNotActiveException();
     }
   }
 
@@ -39,8 +45,28 @@ public class UserService implements UserQueryService {
     return user.getId();
   }
 
+  public void deactivateUser(UUID userId) {
+    repository
+        .findById(userId)
+        .ifPresentOrElse(
+            user -> {
+              user.deactivate();
+              repository.save(user);
+              log.debug("User with userId={} deactivated", userId);
+            },
+            () ->
+                log.error(
+                    "Could not deactivate user with userId={}: not a valid user or already deactivated",
+                    userId));
+  }
+
   private static UserDto toDto(User user) {
     return new UserDto(
-        user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRank());
+        user.getId(),
+        user.getFirstName(),
+        user.getLastName(),
+        user.getEmail(),
+        user.getRank(),
+        user.isActive());
   }
 }

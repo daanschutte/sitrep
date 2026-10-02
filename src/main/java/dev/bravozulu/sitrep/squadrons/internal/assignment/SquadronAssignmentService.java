@@ -57,7 +57,7 @@ public class SquadronAssignmentService {
   @Transactional
   public void assignSquadron(UUID squadronId, SquadronAssignmentCreateRequest request) {
     squadronQueryService.validateSquadronExists(squadronId);
-    userQueryService.validateUserExists(request.userId());
+    userQueryService.validateActiveUserExists(request.userId());
 
     if (repository.findByUserIdAndRevokedAtIsNull(request.userId()).isPresent()) {
       throw new ConflictException(
@@ -71,7 +71,7 @@ public class SquadronAssignmentService {
   public void transferSquadronAssignment(
       UUID newSquadronId, SquadronAssignmentCreateRequest request) {
     squadronQueryService.validateSquadronExists(newSquadronId);
-    userQueryService.validateUserExists(request.userId());
+    userQueryService.validateActiveUserExists(request.userId());
 
     SquadronAssignment existing =
         repository

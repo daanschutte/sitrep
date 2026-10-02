@@ -51,7 +51,7 @@ public class SquadronGuestAssignmentService {
   @Transactional
   public void assignGuestSquadron(UUID squadronId, SquadronGuestAssignmentCreateRequest request) {
     squadronQueryService.validateSquadronExists(squadronId);
-    userQueryService.validateUserExists(request.userId());
+    userQueryService.validateActiveUserExists(request.userId());
 
     if (squadronAssignmentService.isUserPrimarySquadron(squadronId, request.userId())) {
       log.error(
