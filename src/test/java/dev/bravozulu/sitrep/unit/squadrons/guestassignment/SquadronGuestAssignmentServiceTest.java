@@ -21,6 +21,8 @@ import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronNotFoundExceptio
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronRepository;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronService;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
+import dev.bravozulu.sitrep.users.internal.User;
+import dev.bravozulu.sitrep.users.internal.UserNotActiveException;
 import dev.bravozulu.sitrep.users.internal.UserNotFoundException;
 import dev.bravozulu.sitrep.users.internal.UserRepository;
 import dev.bravozulu.sitrep.users.internal.UserService;
@@ -119,13 +121,29 @@ class SquadronGuestAssignmentServiceTest {
     }
 
     @Test
+    void assignGuestSquadron_userNotActive_throwsException() {
+      UUID squadronId = UUID.randomUUID();
+      SquadronGuestAssignmentCreateRequest request =
+          new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
+      User user = activeUser();
+      user.deactivate();
+
+      when(squadronRepository.existsById(squadronId)).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(user));
+
+      assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
+          .isExactlyInstanceOf(UserNotActiveException.class)
+          .hasMessageContaining(request.userId().toString());
+    }
+
+    @Test
     void assignGuestSquadron_userNotFound_throwsException() {
       UUID squadronId = UUID.randomUUID();
       SquadronGuestAssignmentCreateRequest request =
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(false);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> service.assignGuestSquadron(squadronId, request))
           .isExactlyInstanceOf(UserNotFoundException.class)
@@ -139,7 +157,7 @@ class SquadronGuestAssignmentServiceTest {
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(squadronAssignmentService.isUserPrimarySquadron(squadronId, request.userId()))
           .thenReturn(true);
 
@@ -156,7 +174,7 @@ class SquadronGuestAssignmentServiceTest {
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(squadronAssignmentService.isUserPrimarySquadron(squadronId, request.userId()))
           .thenReturn(false);
       when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, request.userId()))
@@ -184,7 +202,7 @@ class SquadronGuestAssignmentServiceTest {
           new SquadronGuestAssignment(squadronId, request.userId(), SquadronRole.STUDENT);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(squadronAssignmentService.isUserPrimarySquadron(squadronId, request.userId()))
           .thenReturn(false);
       when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, request.userId()))
@@ -202,7 +220,7 @@ class SquadronGuestAssignmentServiceTest {
           new SquadronGuestAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.OPS);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(squadronAssignmentService.isUserPrimarySquadron(squadronId, request.userId()))
           .thenReturn(false);
       when(repository.findBySquadronIdAndUserIdAndRevokedAtIsNull(squadronId, request.userId()))
@@ -288,5 +306,9 @@ class SquadronGuestAssignmentServiceTest {
       assertThatThrownBy(() -> service.revokeSquadronGuestAssignment(squadronId, userId))
           .isInstanceOf(NotFoundException.class);
     }
+  }
+
+  private static User activeUser() {
+    return new User("Chuck", "Yeager", "sonic@boom.com", "Gen");
   }
 }

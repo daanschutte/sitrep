@@ -1,7 +1,9 @@
 package dev.bravozulu.sitrep.unit.users;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,7 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.ObjectMapper;
@@ -28,6 +32,7 @@ public class UserControllerTest extends AbstractIntegrationTests {
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private UserRepository repository;
+  @Autowired private JdbcTemplate jdbcTemplate;
 
   private UUID userId;
 
@@ -87,7 +92,42 @@ public class UserControllerTest extends AbstractIntegrationTests {
           .andExpect(jsonPath("$.firstName").value(request.firstName()))
           .andExpect(jsonPath("$.lastName").value(request.lastName()))
           .andExpect(jsonPath("$.email").value(request.email()))
-          .andExpect(jsonPath("$.rank").value(request.rank()));
+          .andExpect(jsonPath("$.rank").value(request.rank()))
+          .andExpect(jsonPath("$.isActive").value(true));
+    }
+
+    @Test
+    void createUser_mixedCaseEmail_storesLowerCase() throws Exception {
+      UserCreateRequest request =
+          new UserCreateRequest("Chuck", "Yeager", "Speedy@JetPilot.com", "Gen");
+
+      MvcResult result =
+          mockMvc
+              .perform(
+                  post("/api/v1/users")
+                      .contentType(MediaType.APPLICATION_JSON)
+                      .content(objectMapper.writeValueAsString(request)))
+              .andExpect(status().isCreated())
+              .andReturn();
+
+      String location = result.getResponse().getHeader("Location");
+      UUID createdId = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
+
+      mockMvc
+          .perform(get("/api/v1/users/{id}", createdId))
+          .andExpect(jsonPath("$.email").value("speedy@jetpilot.com"));
+    }
+
+    @Test
+    void createUser_differentlyCasedDuplicateEmail_returnsConflict() throws Exception {
+      UserCreateRequest request = new UserCreateRequest("Chuck", "Yeager", "SONIC@Boom.com", "Gen");
+
+      mockMvc
+          .perform(
+              post("/api/v1/users")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(objectMapper.writeValueAsString(request)))
+          .andExpect(status().isConflict());
     }
 
     @Test
@@ -149,6 +189,55 @@ public class UserControllerTest extends AbstractIntegrationTests {
                   .contentType(MediaType.APPLICATION_JSON)
                   .content(objectMapper.writeValueAsString(request)))
           .andExpect(status().isUnprocessableContent());
+    }
+  }
+
+  @Nested
+  class DeactivateUser {
+    @Test
+    void deactivateUser_activeUser_returnsNoContent() throws Exception {
+      mockMvc
+          .perform(put("/api/v1/users/{id}/deactivate", userId))
+          .andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(get("/api/v1/users/{id}", userId))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.isActive").value(false));
+    }
+
+    @Test
+    void deactivateUser_unknown_returnsNotFound() throws Exception {
+      mockMvc
+          .perform(put("/api/v1/users/{id}/deactivate", UUID.randomUUID()))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deactivateUser_alreadyDeactivated_returnsConflict() throws Exception {
+      mockMvc
+          .perform(put("/api/v1/users/{id}/deactivate", userId))
+          .andExpect(status().isNoContent());
+
+      mockMvc
+          .perform(put("/api/v1/users/{id}/deactivate", userId))
+          .andExpect(status().isConflict());
+    }
+  }
+
+  @Nested
+  class EmailConstraint {
+    @Test
+    void rawInsert_mixedCaseEmail_violatesNormalisationCheck() {
+      assertThatThrownBy(
+              () ->
+                  jdbcTemplate.update(
+                      "INSERT INTO users (id, first_name, last_name, email, rank, created_at,"
+                          + " updated_at) VALUES (?, 'Pete', 'Mitchell', 'Maverick@Example.com',"
+                          + " 'Capt', now(), now())",
+                      UUID.randomUUID()))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .hasMessageContaining("chk_users_email_normalised");
     }
   }
 

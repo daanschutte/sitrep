@@ -1,0 +1,56 @@
+### Create user to activate
+# @name createUser
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "firstName": "Pete",
+  "lastName": "Mitchell",
+  "email": "maverick@example.com",
+  "rank": "CAPTAIN"
+}
+
+> {%
+    client.global.set("userId", response.headers.valueOf("Location").split("/").pop());
+%}
+
+### Issue activation token
+# @name issueActivationToken
+POST {{baseUrl}}/auth/activation-tokens
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "role": "USER"
+}
+
+> {%
+    client.global.set("activationToken", response.body.token);
+%}
+
+### Redeem activation token
+POST {{baseUrl}}/auth/credentials
+Content-Type: application/json
+
+{
+  "token": "{{activationToken}}",
+  "password": "correct horse battery staple"
+}
+
+### Redeem again (expect 400)
+POST {{baseUrl}}/auth/credentials
+Content-Type: application/json
+
+{
+  "token": "{{activationToken}}",
+  "password": "correct horse battery staple"
+}
+
+### Issue again once a credential exists (expect 409)
+POST {{baseUrl}}/auth/activation-tokens
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "role": "USER"
+}

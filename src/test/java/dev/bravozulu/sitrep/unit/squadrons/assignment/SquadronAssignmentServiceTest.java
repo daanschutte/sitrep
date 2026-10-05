@@ -21,6 +21,8 @@ import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronNotFoundExceptio
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronRepository;
 import dev.bravozulu.sitrep.squadrons.internal.squadron.SquadronService;
 import dev.bravozulu.sitrep.users.api.UserQueryService;
+import dev.bravozulu.sitrep.users.internal.User;
+import dev.bravozulu.sitrep.users.internal.UserNotActiveException;
 import dev.bravozulu.sitrep.users.internal.UserNotFoundException;
 import dev.bravozulu.sitrep.users.internal.UserRepository;
 import dev.bravozulu.sitrep.users.internal.UserService;
@@ -149,7 +151,7 @@ class SquadronAssignmentServiceTest {
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(Optional.empty());
       when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -166,7 +168,7 @@ class SquadronAssignmentServiceTest {
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(
               Optional.of(
@@ -191,13 +193,29 @@ class SquadronAssignmentServiceTest {
     }
 
     @Test
+    void assignSquadron_userNotActive_throwsException() {
+      UUID squadronId = UUID.randomUUID();
+      SquadronAssignmentCreateRequest request =
+          new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
+      User user = activeUser();
+      user.deactivate();
+
+      when(squadronRepository.existsById(squadronId)).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(user));
+
+      assertThatThrownBy(() -> service.assignSquadron(squadronId, request))
+          .isExactlyInstanceOf(UserNotActiveException.class)
+          .hasMessageContaining(request.userId().toString());
+    }
+
+    @Test
     void assignSquadron_userNotFound_throwsException() {
       UUID squadronId = UUID.randomUUID();
       SquadronAssignmentCreateRequest request =
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(false);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> service.assignSquadron(squadronId, request))
           .isExactlyInstanceOf(UserNotFoundException.class)
@@ -210,7 +228,7 @@ class SquadronAssignmentServiceTest {
       SquadronAssignmentCreateRequest request =
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(Optional.empty());
       when(repository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException(""));
@@ -231,7 +249,7 @@ class SquadronAssignmentServiceTest {
           new SquadronAssignment(UUID.randomUUID(), request.userId(), SquadronRole.INSTRUCTOR);
 
       when(squadronRepository.existsById(newSquadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(Optional.of(existing));
       when(repository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -244,13 +262,29 @@ class SquadronAssignmentServiceTest {
     }
 
     @Test
+    void transferSquadronAssignment_userNotActive_throwsException() {
+      UUID squadronId = UUID.randomUUID();
+      SquadronAssignmentCreateRequest request =
+          new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
+      User user = activeUser();
+      user.deactivate();
+
+      when(squadronRepository.existsById(squadronId)).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(user));
+
+      assertThatThrownBy(() -> service.transferSquadronAssignment(squadronId, request))
+          .isExactlyInstanceOf(UserNotActiveException.class)
+          .hasMessageContaining(request.userId().toString());
+    }
+
+    @Test
     void transferSquadronAssignment_noExistingAssignment_throwsNotFoundException() {
       UUID newSquadronId = UUID.randomUUID();
       SquadronAssignmentCreateRequest request =
           new SquadronAssignmentCreateRequest(UUID.randomUUID(), SquadronRole.STUDENT);
 
       when(squadronRepository.existsById(newSquadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(Optional.empty());
 
@@ -267,7 +301,7 @@ class SquadronAssignmentServiceTest {
           new SquadronAssignment(squadronId, request.userId(), SquadronRole.INSTRUCTOR);
 
       when(squadronRepository.existsById(squadronId)).thenReturn(true);
-      when(userRepository.existsById(request.userId())).thenReturn(true);
+      when(userRepository.findById(request.userId())).thenReturn(Optional.of(activeUser()));
       when(repository.findByUserIdAndRevokedAtIsNull(request.userId()))
           .thenReturn(Optional.of(existing));
 
@@ -350,5 +384,9 @@ class SquadronAssignmentServiceTest {
       assertThatThrownBy(() -> service.revokeSquadronAssignment(squadronId, userId))
           .isInstanceOf(NotFoundException.class);
     }
+  }
+
+  private static User activeUser() {
+    return new User("Chuck", "Yeager", "sonic@boom.com", "Gen");
   }
 }

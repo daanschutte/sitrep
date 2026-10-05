@@ -46,7 +46,7 @@ Each module is a top-level package under `dev.bravozulu.sitrep.<module>`. Spring
 |---|---|---|---|
 | `users` | User identity, qualifications, availability, activation lifecycle. Not tenant-scoped — users transfer between squadrons. | `User`, `Qualification`, `Availability` | — |
 | `squadrons` | Squadron definitions, current squadron assignment for users (including role), cross-squadron guest access grants. | `Squadron`, `SquadronAssignment`, `SquadronGuestAssignment` | `users` |
-| `auth` | Login, JWT issuance, refresh token management, password hashing. Provides `currentUser()` / `currentTenantContext()` to other modules. | `RefreshToken` | `users`, `squadrons` |
+| `auth` | Login, JWT issuance, refresh token management, password hashing, account activation. Provides `currentUser()` / `currentTenantContext()` to other modules. Owns the system-level `USER`/`ADMIN` role (distinct from `SquadronRole`, which is assignment-scoped). | `Credential`, `ActivationToken`, `RefreshToken` | `users`, `squadrons` |
 | `platforms` | Aircraft, simulators, rooms. Platform types with authorization profiles. | `Platform`, `PlatformType`, `AuthorizationProfile`, `Tail` | `squadrons` |
 | `courses` | Course definitions, syllabus structure, student enrolment, syllabus board projection. | `Course`, `SyllabusEvent`, `Enrolment`, `SyllabusProgress` | `users`, `squadrons` |
 | `scheduling` | Daily program, event lifecycle (state machine), staging/publishing, formations, conflict detection, cancellations. The core of the system. | `Event`, `Formation`, `CrewSlot`, `DailyProgram` | `users`, `squadrons`, `platforms`, `courses` |
@@ -81,7 +81,7 @@ Each module is a top-level package under `dev.bravozulu.sitrep.<module>`. Spring
 - **Tables NOT RLS-scoped** (must be visible across tenant context for the auth/admin flow to work):
   - `users.user` — users transfer between squadrons.
   - `squadrons.squadron`, `squadrons.squadron_assignment`, `squadrons.cross_squadron_grant` — needed to compute the `accessible_squadrons` claim at login.
-  - `auth.refresh_token` — looked up by token hash, not by tenant.
+  - `auth.credential`, `auth.activation_token`, `auth.refresh_token` — looked up by user id or token hash, not by tenant.
   - `audit.audit_entry` — audit is system-wide.
   - `outbox.outbox_message` — infrastructure.
 - For background workers (outbox dispatcher), the worker resolves the appropriate tenant context per message before invoking consumers. Since `outbox_message` and `audit_entry` are not RLS-scoped, the dispatcher itself doesn't need BYPASSRLS — it just needs to set the right tenant context before any consumer touches RLS-scoped tables.
@@ -129,12 +129,18 @@ Each module is a top-level package under `dev.bravozulu.sitrep.<module>`. Spring
 
 #### A.4.5 Authentication
 
-- `POST /api/v1/auth/login` — username + password → access token (JWT, HS256, 15 min) + refresh token (opaque, 30 days, HttpOnly cookie).
+- **Credential vs. identity**: `User` (in `users`) has no password field. `auth` owns `Credential` (`userId`, `passwordHash`, `role: USER|ADMIN`) — a 1:1-by-`userId` record, FK by UUID only, no JPA relationship (same pattern as `squadrons` → `users`). Email stays single-sourced in `users`; `auth` resolves `email → userId` via `UserQueryService.findUserIdByEmail`.
+- **Account activation** (account creation is two separate calls, not a cross-module transaction — see ADR discussion in PLAN.md): `POST /api/v1/users` creates the user with no credential (same precedent as "user exists, no squadron yet" — a harmless intermediate state, not an invariant violation). An admin then issues an `ActivationToken` (`userId`, `tokenHash`, `expiresAt`, `consumedAt` — hashed at rest like `RefreshToken`, single-use). No email server yet, so the issuing endpoint returns the raw token directly in the response as a stand-in for the eventual email step. The token (not just `userId`) is what proves the caller is the account owner when setting the password — this is the real security control against account takeover, not just a UX nicety. Typical industry windows: 24–72h for activation/invite tokens (this case) vs. much shorter (15–60min) for password-reset tokens, since reset implies the requester already has live access.
+- `POST /api/v1/auth/credentials` — redeems an `ActivationToken` + chosen password → creates `Credential`.
+- `POST /api/v1/auth/login` — email + password → access token (JWT, HS256, 15 min) + refresh token (opaque, 30 days, HttpOnly cookie).
 - `POST /api/v1/auth/refresh` — exchanges refresh token for new access token + rotated refresh token. Old refresh token is revoked.
 - `POST /api/v1/auth/logout` — revokes refresh token.
 - Passwords: BCrypt cost 12.
-- JWT claims: `sub` (user id), `squadron` (current squadron id), `accessible_squadrons` (array), `roles` (array), `iat`, `exp`.
-- Refresh tokens stored as SHA-256 hash so a DB leak doesn't grant access.
+- JWT claims: `sub` (user id), `squadron` (current squadron id), `accessible_squadrons` (array), `role` (`USER`/`ADMIN`, from `Credential`), `iat`, `exp`. A custom `JwtAuthenticationConverter` maps the `role` claim to `GrantedAuthority` (Spring's default converter assumes a `scope`/`SCOPE_` claim shape).
+- Signing key: HS256 shared secret via env var for now (`// TODO` toward real secrets management later, matches `.env.example` pattern for DB credentials).
+- TTLs (access, refresh, activation-token window) are all configurable in `application.yml`.
+- Refresh tokens and activation tokens stored as SHA-256 hash so a DB leak doesn't grant access.
+- **System role is narrow by design**: just `USER`/`ADMIN` on `Credential`. This is distinct from `SquadronRole` (`squadrons.SquadronAssignment.role` — `ADMIN`, `MANAGER`, `PLANNER`, `INSTRUCTOR`, `STUDENT`, `OPS`, `BASIC`), which is assignment-scoped and does the actual fine-grained filtering within a squadron. The system role only gates squadron/user-management-type actions. **Known inconsistency**: §B.3's endpoint table still lists a `bearer + PLANNER` gate on the room endpoints — that should become a `SquadronRole` check, not a system role, once those endpoints are revisited.
 - **Brute-force protection**: deferred to a later slice. Will likely add a `login_attempt` table with IP/username-keyed counters and exponential backoff, applied as a Spring Security filter.
 
 #### A.4.6 API Standards
@@ -242,14 +248,32 @@ These are gold for interviews — concrete evidence you think about trade-offs.
 
 #### `users.User`
 - `id UUID PK`
-- `username VARCHAR(64) UNIQUE NOT NULL`
-- `password_hash VARCHAR(60) NOT NULL` (BCrypt)
+- `email VARCHAR(255) UNIQUE NOT NULL`
 - `display_name VARCHAR(128) NOT NULL`
 - `personal_callsign VARCHAR(16)` nullable
 - `active BOOLEAN NOT NULL DEFAULT true`
 - `created_at TIMESTAMP WITH TIME ZONE NOT NULL`, `updated_at TIMESTAMP WITH TIME ZONE NOT NULL`
 
-Not RLS-scoped. The `User` entity exposes `activate()`, `deactivate()`, and `changePasswordHash(newHash)` (it owns its hash, but doesn't know how to compute one). Password verification and hashing live in `auth.PasswordHasher` (a `BCryptPasswordEncoder` wrapper), keeping the BCrypt dependency out of the domain entity.
+Not RLS-scoped. No password field — `User` is identity-only. `auth` owns credential/password concerns entirely on its own `Credential` entity (below), keyed by `userId` only (FK by UUID, no JPA relationship). `UserQueryService.findUserIdByEmail` is the seam `auth` uses to resolve identity at login. The `User` entity exposes `activate()` / `deactivate()`.
+
+#### `auth.Credential`
+- `id UUID PK`
+- `user_id UUID UNIQUE NOT NULL` (FK by UUID only, no JPA relationship)
+- `password_hash VARCHAR(60) NOT NULL` (BCrypt cost 12)
+- `role VARCHAR(16) NOT NULL` — enum: `USER`, `ADMIN`. System-level role, distinct from `SquadronRole`.
+- `created_at TIMESTAMP WITH TIME ZONE NOT NULL`, `updated_at TIMESTAMP WITH TIME ZONE NOT NULL`
+
+Not RLS-scoped. Created via `POST /api/v1/auth/credentials` redeeming a valid `ActivationToken`.
+
+#### `auth.ActivationToken`
+- `id UUID PK`
+- `user_id UUID NOT NULL` (FK by UUID only, no JPA relationship)
+- `token_hash CHAR(64) NOT NULL` (hex SHA-256 of the random secret — same pattern as `RefreshToken`)
+- `created_at TIMESTAMP WITH TIME ZONE NOT NULL`
+- `expires_at TIMESTAMP WITH TIME ZONE NOT NULL` (TTL configurable in `application.yml`, 24–72h range)
+- `consumed_at TIMESTAMP WITH TIME ZONE` nullable — single-use
+
+Not RLS-scoped. Issued by an admin action; raw token returned directly in the response for now (no email server yet — stand-in for the eventual email-delivery step).
 
 #### `squadrons.Squadron`
 - `id UUID PK`
@@ -327,11 +351,13 @@ This is a placeholder so we can demonstrate RLS works. Real `platforms` module g
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/api/v1/auth/login` | none | Username/password → tokens |
+| `POST` | `/api/v1/auth/login` | none | Email/password → tokens |
 | `POST` | `/api/v1/auth/refresh` | refresh cookie | Rotate tokens |
 | `POST` | `/api/v1/auth/logout` | refresh cookie | Revoke refresh token |
+| `POST` | `/api/v1/auth/activation-tokens` | bearer + ADMIN | Issue an `ActivationToken` for a user; raw token returned in response (no email server yet) |
+| `POST` | `/api/v1/auth/credentials` | none (proof is the token) | Redeem an `ActivationToken` + chosen password → creates `Credential` |
 | `GET` | `/api/v1/users/me` | bearer | Current user info |
-| `POST` | `/api/v1/users` | bearer + ADMIN | Create user (no squadron — assigned separately, matches functional design §4) |
+| `POST` | `/api/v1/users` | bearer + ADMIN | Create user (no squadron, no credential — assigned/activated separately, matches functional design §4) |
 | `POST` | `/api/v1/users/{id}/deactivate` | bearer + ADMIN | Deactivate user |
 | `POST` | `/api/v1/squadrons` | bearer + ADMIN | Create squadron |
 | `PUT` | `/api/v1/squadrons/{id}/enable` | bearer + ADMIN | Enable squadron |
@@ -361,7 +387,7 @@ V1__roles_and_schemas.sql        (create audit schema; GRANT USAGE ON SCHEMA aud
 V2__users.sql                    (user table in public)
 V3__squadrons.sql                (squadron, squadron_assignment with partial unique index,
                                   cross_squadron_grant — all in public)
-V4__auth.sql                     (refresh_token in public)
+V4__auth.sql                     (credential, activation_token, refresh_token — all in public)
 V5__audit.sql                    (audit.audit_entry; GRANT INSERT to audit_writer;
                                   REVOKE UPDATE/DELETE; BEFORE UPDATE OR DELETE trigger)
 V6__outbox.sql                   (outbox_message in public, with dispatch index)
